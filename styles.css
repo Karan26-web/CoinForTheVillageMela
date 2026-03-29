@@ -151,30 +151,27 @@ img {
   pointer-events: none;
 }
 
-.machine-display-mask,
 .machine-total,
 .machine-meter {
   transition: opacity 220ms ease;
 }
 
-.machine-display-mask {
-  display: none;
-}
-
 .machine-total {
   position: absolute;
-  top: 12%;
+  top: 12.6%;
   left: 50%;
   transform: translateX(-50%);
-  width: 43%;
+  width: 40%;
   text-align: center;
-  font-size: clamp(2rem, 4.3vw, 3.55rem);
+  font-size: clamp(1.8rem, 3.8vw, 3.15rem);
   font-weight: 900;
   letter-spacing: -0.04em;
-  line-height: 1;
+  line-height: 0.95;
   color: #a92b03;
   text-shadow: 0 2px 10px rgba(255, 235, 175, 0.44);
   white-space: nowrap;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .machine-meter {

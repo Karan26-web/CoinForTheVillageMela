@@ -20,7 +20,6 @@ const gameTitle = document.getElementById("gameTitle");
 const statusMessage = document.getElementById("statusMessage");
 const selectionHint = document.getElementById("selectionHint");
 const machineTotal = document.getElementById("machineTotal");
-const currentTotal = document.getElementById("currentTotal");
 const meterFill = document.getElementById("meterFill");
 const machineMeter = document.getElementById("machineMeter");
 const nextButton = document.getElementById("nextButton");
@@ -92,7 +91,6 @@ function refreshMeter() {
   meterFill.style.height = `${fillAmount}%`;
   machineMeter.setAttribute("aria-valuenow", String(total));
   machineTotal.textContent = formatRupees(total);
-  currentTotal.textContent = `${formatRupees(total)} / ₹10`;
 }
 
 function refreshPhase() {

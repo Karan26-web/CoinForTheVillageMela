@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Money Meter</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=6" />
   </head>
   <body>
     <div class="page-shell">
@@ -38,8 +38,6 @@
                   alt="Money meter machine"
                 />
 
-                <div class="machine-display-mask" aria-hidden="true"></div>
-
                 <div class="machine-total" id="machineTotal" aria-live="polite">
                   ₹0
                 </div>
@@ -59,7 +57,6 @@
               </div>
 
               <div class="assistive-copy sr-only">
-                <p id="currentTotal" aria-live="polite">₹0 / ₹10</p>
                 <p id="selectionHint">
                   Tap any denomination to lock it in for this round.
                 </p>
@@ -155,6 +152,6 @@
       </main>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=6"></script>
   </body>
 </html>

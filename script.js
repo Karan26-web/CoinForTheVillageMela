@@ -1,4 +1,9 @@
-const GOAL_TOTAL = 10;
+const {
+  GOAL_TOTAL,
+  createInitialMoneyMeterState,
+  evaluateMoneyMeterMove,
+  isMoneyMeterSelectionLocked,
+} = window.MoneyMeterGameLogic;
 const confettiColors = Object.freeze([
   "#ff6b35",
   "#ffd447",
@@ -19,8 +24,7 @@ const assetPaths = Object.freeze([
   "assets/ticket.png",
 ]);
 
-let total = 0;
-let selectedDenomination = null;
+let gameState = createInitialMoneyMeterState();
 let audioContext = null;
 let confettiCleanupTimer = 0;
 let ticketRevealTimer = 0;
@@ -52,7 +56,7 @@ function formatDenomination(value) {
 }
 
 function refreshMessages(customStartMessage = "") {
-  if (total === GOAL_TOTAL) {
+  if (gameState.isComplete) {
     gameTitle.textContent = "Amazing! you did it";
     statusMessage.textContent = "Amazing! you did it";
     selectionHint.textContent = "Aru reached ₹10. Tap Next to start a fresh round.";
@@ -61,7 +65,7 @@ function refreshMessages(customStartMessage = "") {
 
   gameTitle.textContent = "Help Aru make ₹10";
 
-  if (selectedDenomination === null) {
+  if (gameState.selectedDenomination === null) {
     statusMessage.textContent =
       customStartMessage || "Choose one coin or note to start the round.";
     selectionHint.textContent =
@@ -69,46 +73,48 @@ function refreshMessages(customStartMessage = "") {
     return;
   }
 
-  const remaining = GOAL_TOTAL - total;
+  const remaining = GOAL_TOTAL - gameState.total;
 
-  if (remaining === selectedDenomination) {
-    statusMessage.textContent = `So close! One more ${formatRupees(selectedDenomination)} tap gets Aru to ₹10.`;
+  if (remaining === gameState.selectedDenomination) {
+    statusMessage.textContent = `So close! One more ${formatRupees(gameState.selectedDenomination)} tap gets Aru to ₹10.`;
   } else {
-    statusMessage.textContent = `${formatRupees(remaining)} left. Keep using only the ${formatDenomination(selectedDenomination)}.`;
+    statusMessage.textContent = `${formatRupees(remaining)} left. Keep using only the ${formatDenomination(gameState.selectedDenomination)}.`;
   }
 
-  selectionHint.textContent = `Locked to ${formatDenomination(selectedDenomination)} until Aru reaches ₹10.`;
+  selectionHint.textContent = `Locked to ${formatDenomination(gameState.selectedDenomination)} until Aru reaches ₹10.`;
 }
 
 function refreshButtons() {
-  const isComplete = total === GOAL_TOTAL;
+  const isComplete = gameState.isComplete;
 
   moneyButtons.forEach((button) => {
     const value = Number(button.dataset.value);
-    const isSelected = !isComplete && selectedDenomination === value;
-    const isLocked =
-      isComplete || (selectedDenomination !== null && value !== selectedDenomination);
+    const isSelected = !isComplete && gameState.selectedDenomination === value;
+    const isLocked = isMoneyMeterSelectionLocked(gameState, value);
 
     button.classList.toggle("is-selected", isSelected);
     button.classList.toggle("is-locked", isLocked);
     button.classList.toggle("is-complete-locked", isComplete);
     button.setAttribute("aria-pressed", String(isSelected));
-    button.disabled = isComplete;
+    button.disabled = isLocked;
   });
 }
 
 function refreshMeter() {
-  const fillAmount = (total / GOAL_TOTAL) * 100;
+  const fillAmount = (gameState.total / GOAL_TOTAL) * 100;
 
   meterFill.style.height = `${fillAmount}%`;
-  machineMeter.setAttribute("aria-valuenow", String(total));
-  machineTotal.textContent = formatRupees(total);
+  machineMeter.setAttribute("aria-valuenow", String(gameState.total));
+  machineTotal.textContent = formatRupees(gameState.total);
 }
 
 function refreshPhase() {
-  const isComplete = total === GOAL_TOTAL;
+  const isComplete = gameState.isComplete;
 
-  pageShell.classList.toggle("is-near-complete", total >= 8 && total < GOAL_TOTAL);
+  pageShell.classList.toggle(
+    "is-near-complete",
+    gameState.total >= 8 && !isComplete,
+  );
   pageShell.classList.toggle("is-complete", isComplete);
 
   if (!isComplete) {
@@ -276,33 +282,20 @@ function updateGame(customStartMessage = "") {
 function handleMoneyClick(event) {
   const button = event.currentTarget;
   const clickedValue = Number(button.dataset.value);
+  const move = evaluateMoneyMeterMove(gameState, clickedValue);
 
-  if (total === GOAL_TOTAL) {
-    return;
-  }
-
-  if (selectedDenomination !== null && clickedValue !== selectedDenomination) {
+  if (!move.accepted) {
     playDeniedSound();
     restartAnimation(button, "is-denied");
     return;
   }
 
-  if (total + clickedValue > GOAL_TOTAL) {
-    playDeniedSound();
-    restartAnimation(button, "is-denied");
-    return;
-  }
-
-  if (selectedDenomination === null) {
-    selectedDenomination = clickedValue;
-  }
-
-  total += clickedValue;
+  gameState = move.nextState;
   playTapSound(clickedValue);
   updateGame();
   restartAnimation(button, "is-bouncing");
 
-  if (total === GOAL_TOTAL) {
+  if (gameState.isComplete) {
     runSuccessSequence();
   }
 }
@@ -310,8 +303,7 @@ function handleMoneyClick(event) {
 function resetGame() {
   clearConfettiBurst();
   clearTicketReveal();
-  total = 0;
-  selectedDenomination = null;
+  gameState = createInitialMoneyMeterState();
   updateGame("Pick a new denomination for the next round.");
 }
 

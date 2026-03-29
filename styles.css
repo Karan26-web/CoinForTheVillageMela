@@ -298,6 +298,25 @@ img {
   filter: drop-shadow(0 24px 18px rgba(132, 70, 24, 0.16));
 }
 
+.machine-wrap::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 12.38%;
+  width: 16.4%;
+  height: 0.92%;
+  transform: translateX(-50%);
+  border-radius: 6px;
+  background: linear-gradient(180deg, #2b0d03 0%, #6b3418 45%, #170500 100%);
+  box-shadow:
+    0 0 0 2px rgba(247, 229, 195, 0.84),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.56),
+    0 4px 8px rgba(117, 57, 20, 0.18);
+  pointer-events: none;
+  z-index: 4;
+}
+
 .machine-image {
   width: 100%;
   height: auto;
@@ -383,9 +402,9 @@ img {
 .ticket-bay {
   position: absolute;
   left: 50%;
-  bottom: 3.2%;
-  width: 14.5%;
-  height: 23%;
+  bottom: 5.2%;
+  width: 15%;
+  height: 7.1%;
   transform: translateX(-50%);
   overflow: hidden;
   pointer-events: none;
@@ -395,11 +414,11 @@ img {
 .ticket-prize {
   position: absolute;
   left: 50%;
-  bottom: 12%;
-  width: 104%;
+  top: 0;
+  width: 102%;
   opacity: 0;
-  transform: translate(-50%, 110%);
-  transform-origin: center bottom;
+  transform: translate(-50%, -92%);
+  transform-origin: center top;
 }
 
 .ticket-prize__image {
@@ -429,7 +448,7 @@ img {
   inset: 0;
   overflow: visible;
   pointer-events: none;
-  z-index: 4;
+  z-index: 5;
 }
 
 .confetti-piece {
@@ -737,14 +756,14 @@ img {
 @keyframes ticket-rise {
   0% {
     opacity: 0;
-    transform: translate(-50%, 110%);
+    transform: translate(-50%, -92%);
   }
   20% {
     opacity: 1;
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, 12%);
+    transform: translate(-50%, -18%);
   }
 }
 

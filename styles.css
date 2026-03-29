@@ -2,9 +2,16 @@
   color-scheme: light;
   --brown: #6c3412;
   --brown-deep: #4f210a;
+  --brown-rich: #8c430d;
+  --cream: #fff6ea;
+  --cream-deep: #ffe5b2;
   --gold: #ffcf5d;
+  --gold-deep: #f2a81b;
   --sky: #4db8f3;
   --sky-deep: #2497dc;
+  --mint: #5ec978;
+  --mint-deep: #3ca85a;
+  --shadow-brown: rgba(94, 43, 12, 0.18);
 }
 
 *,
@@ -79,18 +86,10 @@ img {
   z-index: 1;
   width: min(1280px, 100%);
   margin: 0 auto;
-  background: none;
-  box-shadow: none;
-  border: 0;
 }
 
 .play-surface {
   padding: 0;
-  background: none;
-  box-shadow: none;
-  border: 0;
-  border-radius: 0;
-  backdrop-filter: none;
 }
 
 .top-banner {
@@ -122,6 +121,161 @@ img {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.selection-screen,
+.game-screen {
+  margin-top: clamp(10px, 2vw, 24px);
+}
+
+.selection-screen[hidden],
+.game-screen[hidden] {
+  display: none !important;
+}
+
+.ride-list {
+  display: grid;
+  gap: clamp(18px, 2.4vw, 28px);
+  width: min(100%, 980px);
+  margin: 0 auto;
+}
+
+.ride-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: clamp(92px, 10vw, 122px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(16px, 2.4vw, 24px);
+  width: 100%;
+  min-height: clamp(98px, 11vw, 132px);
+  padding: 10px clamp(16px, 2.6vw, 28px) 10px 10px;
+  border: 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 243, 211, 0.38), rgba(255, 255, 255, 0))
+      top / 100% 38% no-repeat,
+    linear-gradient(180deg, #965013 0%, #7e3c0d 100%);
+  box-shadow:
+    0 18px 30px rgba(103, 48, 14, 0.2),
+    inset 0 0 0 4px rgba(255, 236, 185, 0.96);
+  color: #fff7f1;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease;
+}
+
+.ride-card:hover:not(:disabled) {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow:
+    0 24px 34px rgba(103, 48, 14, 0.24),
+    inset 0 0 0 4px rgba(255, 236, 185, 0.98);
+}
+
+.ride-card:focus-visible {
+  outline: 4px solid rgba(94, 201, 120, 0.42);
+  outline-offset: 8px;
+}
+
+.ride-card:disabled {
+  cursor: default;
+}
+
+.ride-card.is-completed {
+  filter: grayscale(0.82) saturate(0.34);
+  opacity: 0.78;
+}
+
+.ride-card__icon-shell {
+  display: grid;
+  place-items: center;
+  width: clamp(92px, 10vw, 122px);
+  height: clamp(92px, 10vw, 122px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.22), transparent 38%),
+    linear-gradient(180deg, #8d430e 0%, #7d390c 100%);
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 236, 185, 0.96),
+    0 12px 18px rgba(91, 42, 12, 0.2);
+}
+
+.ride-card__icon {
+  font-size: clamp(2.8rem, 4vw, 4rem);
+  line-height: 1;
+}
+
+.ride-card__copy {
+  min-width: 0;
+}
+
+.ride-card__name {
+  display: block;
+  font-size: clamp(1.22rem, 2.1vw, 1.92rem);
+  line-height: 1.05;
+  color: #fffaf4;
+  text-shadow: 0 2px 10px rgba(93, 42, 12, 0.22);
+}
+
+.ride-card__target {
+  min-width: clamp(112px, 13vw, 154px);
+  padding-left: clamp(8px, 1vw, 14px);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  text-align: right;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(93, 42, 12, 0.22);
+}
+
+.level-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: clamp(8px, 1vw, 14px);
+}
+
+.action-button {
+  min-height: 50px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 18px;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #fff;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.action-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.action-button:focus-visible {
+  outline: 4px solid rgba(255, 238, 188, 0.8);
+  outline-offset: 4px;
+}
+
+.action-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.action-button--primary {
+  background: linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 100%);
+  box-shadow: 0 16px 24px rgba(32, 123, 182, 0.22);
+}
+
+.action-button--secondary {
+  background: linear-gradient(180deg, #ad5f1a 0%, #8f470c 100%);
+  box-shadow: 0 16px 24px rgba(118, 61, 18, 0.2);
 }
 
 .board-layout {
@@ -217,7 +371,12 @@ img {
   inset: 0;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent 24%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 44%, rgba(255, 255, 255, 0.08));
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.06),
+      transparent 44%,
+      rgba(255, 255, 255, 0.08)
+    );
   pointer-events: none;
 }
 
@@ -318,7 +477,12 @@ img {
 .page-shell.is-complete .machine-meter__shine {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.36), transparent 26%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent 44%, rgba(255, 252, 216, 0.22));
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.12),
+      transparent 44%,
+      rgba(255, 252, 216, 0.22)
+    );
 }
 
 .page-shell.is-ticket-visible .ticket-prize {
@@ -329,10 +493,11 @@ img {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
 }
 
 .controls-panel {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 780px;
   min-height: clamp(320px, 33vw, 560px);
@@ -355,6 +520,7 @@ img {
   justify-items: center;
   column-gap: clamp(18px, 2.6vw, 44px);
   row-gap: clamp(40px, 6vw, 88px);
+  flex: 1;
 }
 
 .money-button,
@@ -377,7 +543,7 @@ img {
     opacity 180ms ease;
 }
 
-.money-button:hover {
+.money-button:hover:not(:disabled) {
   transform: translateY(-6px) scale(1.04);
 }
 
@@ -480,6 +646,15 @@ img {
   transform: scale(1);
 }
 
+.money-button.is-overflow-blocked {
+  filter: grayscale(0.4) brightness(0.85);
+  opacity: 0.38;
+}
+
+.money-button.is-overflow-blocked .money-button__lock {
+  opacity: 0;
+}
+
 .money-button.is-complete-locked,
 .money-button.is-complete-locked:hover {
   transform: none;
@@ -514,35 +689,6 @@ img {
   cursor: default;
 }
 
-.next-button {
-  padding: 15px 34px;
-  border: 0;
-  border-radius: 18px;
-  font-size: 1.08rem;
-  font-weight: 900;
-  color: #fff;
-  background: linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 100%);
-  box-shadow: 0 18px 24px rgba(36, 125, 190, 0.2);
-  opacity: 0;
-  transform: translateY(10px);
-  pointer-events: none;
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.page-shell.is-complete .next-button:not(:disabled) {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-  animation: next-pulse 1.35s ease-in-out infinite;
-}
-
-.next-button:not(:disabled):hover {
-  box-shadow: 0 22px 28px rgba(36, 125, 190, 0.26);
-}
-
 @keyframes money-bounce {
   0%,
   100% {
@@ -569,20 +715,6 @@ img {
   }
   75% {
     transform: translateX(-3px);
-  }
-}
-
-@keyframes next-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    box-shadow: 0 20px 28px rgba(36, 125, 190, 0.26);
-  }
-  50% {
-    transform: scale(1.03);
-    box-shadow:
-      0 20px 28px rgba(36, 125, 190, 0.28),
-      0 0 0 10px rgba(86, 197, 255, 0.16);
   }
 }
 
@@ -636,6 +768,10 @@ img {
     padding: 20px 20px 28px;
   }
 
+  .ride-card {
+    grid-template-columns: 104px minmax(0, 1fr) auto;
+  }
+
   .board-layout {
     grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1fr);
     gap: 26px;
@@ -661,6 +797,30 @@ img {
   }
 }
 
+@media (max-width: 720px) {
+  .ride-card {
+    grid-template-columns: 92px minmax(0, 1fr);
+    padding-right: 18px;
+  }
+
+  .ride-card__target {
+    grid-column: 2;
+    justify-self: start;
+    min-width: 0;
+    padding-left: 0;
+    margin-top: -2px;
+    text-align: left;
+  }
+
+  .level-actions {
+    flex-direction: column;
+  }
+
+  .action-button {
+    width: 100%;
+  }
+}
+
 @media (max-width: 620px) {
   .page-shell {
     padding: 16px 12px 24px;
@@ -672,6 +832,20 @@ img {
 
   .top-banner h1 {
     font-size: clamp(0.96rem, 4.5vw, 1.35rem);
+  }
+
+  .ride-card {
+    gap: 14px;
+    min-height: 92px;
+  }
+
+  .ride-card__icon-shell {
+    width: 86px;
+    height: 86px;
+  }
+
+  .ride-card__icon {
+    font-size: 2.5rem;
   }
 
   .controls-panel {

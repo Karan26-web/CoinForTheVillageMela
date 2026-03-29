@@ -1,9 +1,44 @@
 const {
-  GOAL_TOTAL,
-  createInitialMoneyMeterState,
+  LEVEL_RULE_TYPES,
+  VALID_DENOMINATIONS,
+  createInitialRoundState,
   evaluateMoneyMeterMove,
   isMoneyMeterSelectionLocked,
 } = window.MoneyMeterGameLogic;
+
+const LEVELS = Object.freeze([
+  Object.freeze({
+    id: "merry-go-round",
+    name: "Merry-Go-Round",
+    targetAmount: 10,
+    ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
+    icon: "🎠",
+  }),
+  Object.freeze({
+    id: "rainbow-slide",
+    name: "Rainbow-Slide",
+    targetAmount: 13,
+    ruleType: LEVEL_RULE_TYPES.MIXED,
+    icon: "🌈",
+  }),
+  Object.freeze({
+    id: "giant-wheel",
+    name: "Giant-Wheel",
+    targetAmount: 7,
+    ruleType: LEVEL_RULE_TYPES.MIXED,
+    icon: "🎡",
+  }),
+  Object.freeze({
+    id: "bumper-car",
+    name: "Bumper-Car",
+    targetAmount: 20,
+    ruleType: LEVEL_RULE_TYPES.MIXED,
+    icon: "🚗",
+  }),
+]);
+
+const levelLookup = new Map(LEVELS.map((level) => [level.id, level]));
+
 const confettiColors = Object.freeze([
   "#ff6b35",
   "#ffd447",
@@ -24,21 +59,33 @@ const assetPaths = Object.freeze([
   "assets/ticket.png",
 ]);
 
-let gameState = createInitialMoneyMeterState();
+let gameState = createInitialRoundState();
+let activeLevelId = null;
+let completedLevelIds = new Set();
 let audioContext = null;
 let confettiCleanupTimer = 0;
 let ticketRevealTimer = 0;
+let returnToSelectionTimer = 0;
 
 const pageShell = document.querySelector(".page-shell");
 const gameTitle = document.getElementById("gameTitle");
 const statusMessage = document.getElementById("statusMessage");
+const selectionScreen = document.getElementById("selectionScreen");
+const gameScreen = document.getElementById("gameScreen");
+const rideList = document.getElementById("rideList");
+const levelName = document.getElementById("levelName");
 const selectionHint = document.getElementById("selectionHint");
 const machineTotal = document.getElementById("machineTotal");
 const meterFill = document.getElementById("meterFill");
 const machineMeter = document.getElementById("machineMeter");
-const nextButton = document.getElementById("nextButton");
+const backButton = document.getElementById("backButton");
+const restartButton = document.getElementById("restartButton");
 const confettiLayer = document.getElementById("confettiLayer");
 const moneyButtons = [...document.querySelectorAll(".money-button")];
+
+function getActiveLevel() {
+  return activeLevelId ? levelLookup.get(activeLevelId) ?? null : null;
+}
 
 function preloadAssets() {
   assetPaths.forEach((src) => {
@@ -55,65 +102,198 @@ function formatDenomination(value) {
   return value === 10 ? "₹10" : `₹${value} coin`;
 }
 
-function refreshMessages(customStartMessage = "") {
+function getRuleBadgeText(ruleType) {
+  return ruleType === LEVEL_RULE_TYPES.MIXED ? "Mix Coins" : "Same Coin Only";
+}
+
+function getSelectionScreenStatus() {
+  if (completedLevelIds.size === LEVELS.length) {
+    return "Every ride is complete. Refresh the page if you want to play the carnival again.";
+  }
+
+  if (completedLevelIds.size === 0) {
+    return "Choose a ride to start the next level.";
+  }
+
+  const rideWord = completedLevelIds.size === 1 ? "ride" : "rides";
+  return `${completedLevelIds.size} ${rideWord} complete. Choose another ride.`;
+}
+
+function getAvailableMoves(state) {
+  return VALID_DENOMINATIONS.filter(
+    (value) => evaluateMoneyMeterMove(state, value).accepted,
+  );
+}
+
+function isRoundStuck() {
+  const level = getActiveLevel();
+  if (!level || gameState.isComplete) {
+    return false;
+  }
+
+  return getAvailableMoves(gameState).length === 0;
+}
+
+function renderRideList() {
+  const fragment = document.createDocumentFragment();
+
+  LEVELS.forEach((level) => {
+    const button = document.createElement("button");
+    const isCompleted = completedLevelIds.has(level.id);
+    const ruleLabel = getRuleBadgeText(level.ruleType);
+
+    button.type = "button";
+    button.className = "ride-card";
+    button.dataset.levelId = level.id;
+    button.disabled = isCompleted;
+    button.setAttribute("role", "listitem");
+    button.setAttribute(
+      "aria-label",
+      `${level.name}, target ${formatRupees(level.targetAmount)}, ${ruleLabel}`,
+    );
+
+    if (isCompleted) {
+      button.classList.add("is-completed");
+    }
+
+    button.innerHTML = `
+      <span class="ride-card__icon-shell" aria-hidden="true">
+        <span class="ride-card__icon">${level.icon}</span>
+      </span>
+      <span class="ride-card__copy">
+        <span class="ride-card__name">${level.name}</span>
+      </span>
+      <span class="ride-card__target">${formatRupees(level.targetAmount)}</span>
+    `;
+
+    fragment.appendChild(button);
+  });
+
+  rideList.replaceChildren(fragment);
+}
+
+function refreshHeader() {
+  const level = getActiveLevel();
+
+  if (!level) {
+    gameTitle.textContent = "Welcome to the Carnival Coins!";
+    return;
+  }
+
+  gameTitle.textContent = `Help Aru make ${formatRupees(level.targetAmount)}`;
+  levelName.textContent = level.name;
+}
+
+function refreshMessages(customStatusMessage = "") {
+  const level = getActiveLevel();
+
+  if (!level) {
+    statusMessage.textContent = customStatusMessage || getSelectionScreenStatus();
+    selectionHint.textContent = "Choose a ride to begin.";
+    return;
+  }
+
   if (gameState.isComplete) {
-    gameTitle.textContent = "Amazing! you did it";
-    statusMessage.textContent = "Amazing! you did it";
-    selectionHint.textContent = "Aru reached ₹10. Tap Next to start a fresh round.";
-    return;
-  }
-
-  gameTitle.textContent = "Help Aru make ₹10";
-
-  if (gameState.selectedDenomination === null) {
-    statusMessage.textContent =
-      customStartMessage || "Choose one coin or note to start the round.";
+    statusMessage.textContent = `${level.name} complete! Returning to ride selection...`;
     selectionHint.textContent =
-      "Tap any denomination to lock it in for this round.";
+      "Ticket earned. This ride will be marked complete on the selection board.";
     return;
   }
 
-  const remaining = GOAL_TOTAL - gameState.total;
-
-  if (remaining === gameState.selectedDenomination) {
-    statusMessage.textContent = `So close! One more ${formatRupees(gameState.selectedDenomination)} tap gets Aru to ₹10.`;
+  if (customStatusMessage) {
+    statusMessage.textContent = customStatusMessage;
+  } else if (level.ruleType === LEVEL_RULE_TYPES.MIXED) {
+    const remaining = level.targetAmount - gameState.total;
+    statusMessage.textContent =
+      gameState.total === 0
+        ? `Mix any coins to reach ${formatRupees(level.targetAmount)}.`
+        : `${formatRupees(remaining)} left. You can use any combination of coins.`;
+  } else if (gameState.selectedDenomination === null) {
+    statusMessage.textContent =
+      "Tap any valid coin to begin. That first coin will lock the whole ride.";
+  } else if (isRoundStuck()) {
+    const remaining = level.targetAmount - gameState.total;
+    statusMessage.textContent = `${formatRupees(remaining)} left, but another ${formatRupees(gameState.selectedDenomination)} would go over. Restart this ride and choose a different first coin.`;
   } else {
-    statusMessage.textContent = `${formatRupees(remaining)} left. Keep using only the ${formatDenomination(gameState.selectedDenomination)}.`;
+    const remaining = level.targetAmount - gameState.total;
+
+    statusMessage.textContent =
+      remaining === gameState.selectedDenomination
+        ? `So close! One more ${formatRupees(gameState.selectedDenomination)} gets you to ${formatRupees(level.targetAmount)}.`
+        : `${formatRupees(remaining)} left. Keep using only the ${formatDenomination(gameState.selectedDenomination)}.`;
   }
 
-  selectionHint.textContent = `Locked to ${formatDenomination(gameState.selectedDenomination)} until Aru reaches ₹10.`;
+  selectionHint.textContent =
+    level.ruleType === LEVEL_RULE_TYPES.MIXED
+      ? "Mixed ride: every denomination stays available until you hit the target."
+      : gameState.selectedDenomination === null
+        ? "Same Coin Only ride: the first valid coin decides the only denomination you can keep using."
+        : `Locked to ${formatDenomination(gameState.selectedDenomination)} for this ride.`;
 }
 
 function refreshButtons() {
-  const isComplete = gameState.isComplete;
+  const level = getActiveLevel();
 
   moneyButtons.forEach((button) => {
     const value = Number(button.dataset.value);
-    const isSelected = !isComplete && gameState.selectedDenomination === value;
-    const isLocked = isMoneyMeterSelectionLocked(gameState, value);
+    const preview = level
+      ? evaluateMoneyMeterMove(gameState, value)
+      : { accepted: false, reason: "inactive" };
+    const isRuleLocked = level
+      ? isMoneyMeterSelectionLocked(gameState, value)
+      : true;
+    const isOverflowBlocked =
+      Boolean(level) && !preview.accepted && preview.reason === "overflow";
+    const isSelected =
+      Boolean(level) &&
+      level.ruleType === LEVEL_RULE_TYPES.SAME_DENOMINATION &&
+      !gameState.isComplete &&
+      gameState.selectedDenomination === value;
 
     button.classList.toggle("is-selected", isSelected);
-    button.classList.toggle("is-locked", isLocked);
-    button.classList.toggle("is-complete-locked", isComplete);
+    button.classList.toggle("is-locked", isRuleLocked);
+    button.classList.toggle("is-overflow-blocked", isOverflowBlocked);
+    button.classList.toggle(
+      "is-complete-locked",
+      Boolean(level) && gameState.isComplete,
+    );
     button.setAttribute("aria-pressed", String(isSelected));
-    button.disabled = isLocked;
+    button.disabled = !preview.accepted;
   });
 }
 
 function refreshMeter() {
-  const fillAmount = (gameState.total / GOAL_TOTAL) * 100;
+  const level = getActiveLevel();
+  const targetAmount = level ? level.targetAmount : 10;
+  const currentTotal = level ? gameState.total : 0;
+  const fillAmount = level ? (currentTotal / targetAmount) * 100 : 0;
 
   meterFill.style.height = `${fillAmount}%`;
-  machineMeter.setAttribute("aria-valuenow", String(gameState.total));
-  machineTotal.textContent = formatRupees(gameState.total);
+  machineMeter.setAttribute("aria-valuemax", String(targetAmount));
+  machineMeter.setAttribute("aria-valuenow", String(currentTotal));
+  machineMeter.setAttribute(
+    "aria-valuetext",
+    level
+      ? `${formatRupees(currentTotal)} out of ${formatRupees(targetAmount)}`
+      : "No ride selected",
+  );
+  machineTotal.textContent = formatRupees(currentTotal);
 }
 
 function refreshPhase() {
-  const isComplete = gameState.isComplete;
+  const level = getActiveLevel();
+  const isGameView = Boolean(level);
+  const isComplete = isGameView && gameState.isComplete;
+  const completionRatio = isGameView ? gameState.total / level.targetAmount : 0;
 
+  selectionScreen.hidden = isGameView;
+  gameScreen.hidden = !isGameView;
+
+  pageShell.classList.toggle("is-selection-view", !isGameView);
+  pageShell.classList.toggle("is-game-view", isGameView);
   pageShell.classList.toggle(
     "is-near-complete",
-    gameState.total >= 8 && !isComplete,
+    isGameView && !isComplete && completionRatio >= 0.8,
   );
   pageShell.classList.toggle("is-complete", isComplete);
 
@@ -121,7 +301,13 @@ function refreshPhase() {
     pageShell.classList.remove("is-ticket-visible");
   }
 
-  nextButton.disabled = !isComplete;
+  backButton.disabled = !isGameView;
+  restartButton.disabled = !isGameView;
+}
+
+function clearReturnToSelection() {
+  window.clearTimeout(returnToSelectionTimer);
+  returnToSelectionTimer = 0;
 }
 
 function playTone({ frequency, duration, type = "triangle", gainLevel = 0.07, sweepTo }) {
@@ -214,6 +400,12 @@ function clearTicketReveal() {
   pageShell.classList.remove("is-ticket-visible");
 }
 
+function clearRoundEffects() {
+  clearConfettiBurst();
+  clearTicketReveal();
+  clearReturnToSelection();
+}
+
 function launchConfettiBurst() {
   if (!confettiLayer) {
     return;
@@ -265,6 +457,20 @@ function runSuccessSequence() {
   }, 1080);
 }
 
+function scheduleReturnToSelection() {
+  clearReturnToSelection();
+
+  returnToSelectionTimer = window.setTimeout(() => {
+    const completedLevel = getActiveLevel();
+    if (!completedLevel) {
+      return;
+    }
+
+    completedLevelIds.add(completedLevel.id);
+    showSelectionScreen(`${completedLevel.name} is complete! Choose another ride.`);
+  }, 2200);
+}
+
 function restartAnimation(button, className) {
   button.classList.remove(className);
   void button.offsetWidth;
@@ -272,16 +478,72 @@ function restartAnimation(button, className) {
   window.setTimeout(() => button.classList.remove(className), 320);
 }
 
-function updateGame(customStartMessage = "") {
+function updateGame(customStatusMessage = "") {
+  renderRideList();
+  refreshHeader();
   refreshMeter();
-  refreshMessages(customStartMessage);
+  refreshMessages(customStatusMessage);
   refreshButtons();
   refreshPhase();
 }
 
+function startLevel(levelId) {
+  const level = levelLookup.get(levelId);
+
+  if (!level || completedLevelIds.has(levelId)) {
+    return;
+  }
+
+  clearRoundEffects();
+  activeLevelId = levelId;
+  gameState = createInitialRoundState(level);
+  updateGame(
+    level.ruleType === LEVEL_RULE_TYPES.MIXED
+      ? `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Mix any coins you like.`
+      : `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Your first valid coin will lock the ride.`,
+  );
+}
+
+function showSelectionScreen(customStatusMessage = "") {
+  clearRoundEffects();
+  activeLevelId = null;
+  gameState = createInitialRoundState();
+  updateGame(customStatusMessage || getSelectionScreenStatus());
+}
+
+function restartActiveLevel() {
+  const level = getActiveLevel();
+  if (!level) {
+    return;
+  }
+
+  clearRoundEffects();
+  gameState = createInitialRoundState(level);
+  updateGame(
+    level.ruleType === LEVEL_RULE_TYPES.MIXED
+      ? `${level.name} restarted. Mix any coins to reach ${formatRupees(level.targetAmount)}.`
+      : `${level.name} restarted. Pick a first coin carefully because it will lock the whole ride.`,
+  );
+}
+
+function handleRideSelection(event) {
+  const button = event.target.closest(".ride-card");
+  if (!button || !(button instanceof HTMLButtonElement)) {
+    return;
+  }
+
+  startLevel(button.dataset.levelId);
+}
+
 function handleMoneyClick(event) {
+  const level = getActiveLevel();
   const button = event.currentTarget;
   const clickedValue = Number(button.dataset.value);
+
+  if (!level) {
+    return;
+  }
+
   const move = evaluateMoneyMeterMove(gameState, clickedValue);
 
   if (!move.accepted) {
@@ -297,25 +559,29 @@ function handleMoneyClick(event) {
 
   if (gameState.isComplete) {
     runSuccessSequence();
+    scheduleReturnToSelection();
+  } else if (isRoundStuck()) {
+    updateGame(
+      `That choice locked the ride to ${formatDenomination(gameState.selectedDenomination)}. Restart this ride to try a different first coin.`,
+    );
   }
-}
-
-function resetGame() {
-  clearConfettiBurst();
-  clearTicketReveal();
-  gameState = createInitialMoneyMeterState();
-  updateGame("Pick a new denomination for the next round.");
 }
 
 function init() {
   preloadAssets();
   updateGame();
 
+  rideList.addEventListener("click", handleRideSelection);
+
   moneyButtons.forEach((button) => {
     button.addEventListener("click", handleMoneyClick);
   });
 
-  nextButton.addEventListener("click", resetGame);
+  backButton.addEventListener("click", () => {
+    showSelectionScreen("Choose another ride when you are ready.");
+  });
+
+  restartButton.addEventListener("click", restartActiveLevel);
 }
 
 init();

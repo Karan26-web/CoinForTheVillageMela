@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Money Meter</title>
-    <link rel="stylesheet" href="styles.css?v=11" />
+    <link rel="stylesheet" href="styles.css?v=14" />
   </head>
   <body>
-    <div class="page-shell">
+    <div class="page-shell is-selection-view">
       <div class="page-background" aria-hidden="true"></div>
 
       <main class="game-shell">
@@ -21,156 +21,181 @@
             />
 
             <div class="top-banner__copy">
-              <h1 id="gameTitle">Help Aru make ₹10</h1>
+              <h1 id="gameTitle">Welcome to the Carnival Coins!</h1>
             </div>
           </header>
 
           <p class="sr-only" id="statusMessage" aria-live="polite">
-            Choose one coin or note to start the round.
+            Choose a ride to start the next level.
           </p>
 
-          <div class="board-layout">
-            <section class="machine-column" aria-label="Money meter machine">
-              <div class="machine-wrap">
-                <img
-                  class="machine-image machine-image--base"
-                  src="assets/RealMAchine.png"
-                  alt="Money meter machine"
-                />
+          <section class="selection-screen" id="selectionScreen" aria-label="Ride levels">
+            <div class="selection-panel">
+              <h2 class="sr-only" id="selectionTitle">Choose a carnival ride</h2>
+              <div class="ride-list" id="rideList" role="list"></div>
+            </div>
+          </section>
 
-                <div class="machine-total" id="machineTotal" aria-live="polite">
-                  ₹0
-                </div>
+          <section
+            class="game-screen"
+            id="gameScreen"
+            aria-labelledby="gameTitle levelName"
+            hidden
+          >
+            <h2 class="sr-only" id="levelName">Merry-Go-Round</h2>
 
-                <div
-                  class="machine-meter"
-                  id="machineMeter"
-                  role="meter"
-                  aria-valuemin="0"
-                  aria-valuemax="10"
-                  aria-valuenow="0"
-                  aria-labelledby="gameTitle"
-                >
-                  <div class="machine-meter__fill" id="meterFill"></div>
-                  <div class="machine-meter__shine"></div>
-                </div>
+            <div class="level-actions">
+              <button
+                class="action-button action-button--secondary"
+                type="button"
+                id="backButton"
+              >
+                Back to Rides
+              </button>
+              <button
+                class="action-button action-button--primary"
+                type="button"
+                id="restartButton"
+              >
+                Restart Ride
+              </button>
+            </div>
 
-                <div class="ticket-bay" aria-hidden="true">
-                  <div class="ticket-prize">
-                    <img
-                      class="ticket-prize__image"
-                      src="assets/ticket.png"
-                      alt=""
-                      aria-hidden="true"
-                    />
-                    <span class="ticket-prize__text">TICKET</span>
+            <div class="board-layout">
+              <section class="machine-column" aria-label="Money meter machine">
+                <div class="machine-wrap">
+                  <img
+                    class="machine-image machine-image--base"
+                    src="assets/RealMAchine.png"
+                    alt="Money meter machine"
+                  />
+
+                  <div class="machine-total" id="machineTotal" aria-live="polite">
+                    ₹0
                   </div>
-                </div>
 
-                <div
-                  class="confetti-layer"
-                  id="confettiLayer"
-                  aria-hidden="true"
-                ></div>
-              </div>
-
-              <div class="assistive-copy sr-only">
-                <p id="selectionHint">
-                  Tap any denomination to lock it in for this round.
-                </p>
-              </div>
-            </section>
-
-            <section class="controls-column">
-              <section class="controls-panel" aria-label="Choose a denomination">
-                <div class="money-tray">
-                  <button
-                    class="money-button money-button--coin"
-                    type="button"
-                    data-value="1"
-                    aria-label="₹1 coin"
+                  <div
+                    class="machine-meter"
+                    id="machineMeter"
+                    role="meter"
+                    aria-valuemin="0"
+                    aria-valuemax="10"
+                    aria-valuenow="0"
+                    aria-labelledby="gameTitle levelName"
                   >
-                    <img
-                      class="money-sprite money-sprite--coin"
-                      src="assets/₹1.png"
-                      alt=""
-                      aria-hidden="true"
-                    />
-                    <span class="money-button__lock" aria-hidden="true">🔒</span>
-                  </button>
+                    <div class="machine-meter__fill" id="meterFill"></div>
+                    <div class="machine-meter__shine"></div>
+                  </div>
 
-                  <button
-                    class="money-button money-button--coin"
-                    type="button"
-                    data-value="2"
-                    aria-label="₹2 coin"
-                  >
-                    <img
-                      class="money-sprite money-sprite--coin"
-                      src="assets/₹2.png"
-                      alt=""
-                      aria-hidden="true"
-                    />
-                    <span class="money-button__lock" aria-hidden="true">🔒</span>
-                  </button>
+                  <div class="ticket-bay" aria-hidden="true">
+                    <div class="ticket-prize">
+                      <img
+                        class="ticket-prize__image"
+                        src="assets/ticket.png"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span class="ticket-prize__text">TICKET</span>
+                    </div>
+                  </div>
 
-                  <button
-                    class="money-button money-button--coin"
-                    type="button"
-                    data-value="5"
-                    aria-label="₹5 coin"
-                  >
-                    <img
-                      class="money-sprite money-sprite--coin"
-                      src="assets/₹5.png"
-                      alt=""
-                      aria-hidden="true"
-                    />
-                    <span class="money-button__lock" aria-hidden="true">🔒</span>
-                  </button>
-
-                  <button
-                    class="money-button money-button--coin money-button--ten"
-                    type="button"
-                    data-value="10"
-                    aria-label="₹10 coin"
-                  >
-                    <img
-                      class="money-sprite money-sprite--decor"
-                      src="assets/₹10Coin.png"
-                      alt=""
-                      aria-hidden="true"
-                    />
-                    <span class="money-button__lock" aria-hidden="true">🔒</span>
-                  </button>
-
-                  <button
-                    class="money-button money-button--note"
-                    type="button"
-                    data-value="10"
-                    aria-label="₹10 note"
-                  >
-                    <img
-                      class="money-sprite money-sprite--note"
-                      src="assets/₹10Note.png"
-                      alt=""
-                      aria-hidden="true"
-                    />
-                    <span class="money-button__lock" aria-hidden="true">🔒</span>
-                  </button>
+                  <div
+                    class="confetti-layer"
+                    id="confettiLayer"
+                    aria-hidden="true"
+                  ></div>
                 </div>
               </section>
 
-              <button class="next-button" type="button" id="nextButton" disabled>
-                Next
-              </button>
-            </section>
-          </div>
+              <section class="controls-column">
+                <section class="controls-panel" aria-label="Choose a denomination">
+                  <div class="money-tray">
+                    <button
+                      class="money-button money-button--coin"
+                      type="button"
+                      data-value="1"
+                      aria-label="₹1 coin"
+                    >
+                      <img
+                        class="money-sprite money-sprite--coin"
+                        src="assets/₹1.png"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span class="money-button__lock" aria-hidden="true">🔒</span>
+                    </button>
+
+                    <button
+                      class="money-button money-button--coin"
+                      type="button"
+                      data-value="2"
+                      aria-label="₹2 coin"
+                    >
+                      <img
+                        class="money-sprite money-sprite--coin"
+                        src="assets/₹2.png"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span class="money-button__lock" aria-hidden="true">🔒</span>
+                    </button>
+
+                    <button
+                      class="money-button money-button--coin"
+                      type="button"
+                      data-value="5"
+                      aria-label="₹5 coin"
+                    >
+                      <img
+                        class="money-sprite money-sprite--coin"
+                        src="assets/₹5.png"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span class="money-button__lock" aria-hidden="true">🔒</span>
+                    </button>
+
+                    <button
+                      class="money-button money-button--coin money-button--ten"
+                      type="button"
+                      data-value="10"
+                      aria-label="₹10 coin"
+                    >
+                      <img
+                        class="money-sprite money-sprite--decor"
+                        src="assets/₹10Coin.png"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span class="money-button__lock" aria-hidden="true">🔒</span>
+                    </button>
+
+                    <button
+                      class="money-button money-button--note"
+                      type="button"
+                      data-value="10"
+                      aria-label="₹10 note"
+                    >
+                      <img
+                        class="money-sprite money-sprite--note"
+                        src="assets/₹10Note.png"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span class="money-button__lock" aria-hidden="true">🔒</span>
+                    </button>
+                  </div>
+                </section>
+
+                <p class="sr-only" id="selectionHint">Tap any denomination to begin.</p>
+              </section>
+            </div>
+          </section>
         </section>
       </main>
     </div>
 
-    <script src="gameLogic.js?v=1"></script>
-    <script src="script.js?v=12"></script>
+    <script src="gameLogic.js?v=2"></script>
+    <script src="script.js?v=15"></script>
   </body>
 </html>

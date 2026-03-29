@@ -34,14 +34,8 @@
               <div class="machine-wrap">
                 <img
                   class="machine-image machine-image--base"
-                  src="assets/machine.png"
+                  src="assets/RealMAchine.png"
                   alt="Money meter machine"
-                />
-                <img
-                  class="machine-image machine-image--complete"
-                  src="assets/machineWTicket.png"
-                  alt=""
-                  aria-hidden="true"
                 />
 
                 <div class="machine-display-mask" aria-hidden="true"></div>
@@ -120,13 +114,20 @@
                     <span class="money-button__lock" aria-hidden="true">🔒</span>
                   </button>
 
-                  <div class="money-decor" aria-hidden="true">
+                  <button
+                    class="money-button money-button--coin money-button--ten"
+                    type="button"
+                    data-value="10"
+                    aria-label="₹10 coin"
+                  >
                     <img
                       class="money-sprite money-sprite--decor"
                       src="assets/₹10Coin.png"
                       alt=""
+                      aria-hidden="true"
                     />
-                  </div>
+                    <span class="money-button__lock" aria-hidden="true">🔒</span>
+                  </button>
 
                   <button
                     class="money-button money-button--note"

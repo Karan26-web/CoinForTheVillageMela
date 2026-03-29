@@ -2,9 +2,8 @@ const GOAL_TOTAL = 10;
 
 const assetPaths = Object.freeze([
   "assets/Background.png",
+  "assets/RealMAchine.png",
   "assets/banner.png",
-  "assets/machine.png",
-  "assets/machineWTicket.png",
   "assets/₹1.png",
   "assets/₹2.png",
   "assets/₹5.png",
@@ -39,7 +38,7 @@ function formatRupees(value) {
 }
 
 function formatDenomination(value) {
-  return value === 10 ? "₹10 note" : `₹${value} coin`;
+  return value === 10 ? "₹10" : `₹${value} coin`;
 }
 
 function refreshMessages(customStartMessage = "") {

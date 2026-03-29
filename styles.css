@@ -151,12 +151,6 @@ img {
   pointer-events: none;
 }
 
-.machine-image--complete {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-}
-
 .machine-display-mask,
 .machine-total,
 .machine-meter {
@@ -164,50 +158,43 @@ img {
 }
 
 .machine-display-mask {
-  position: absolute;
-  top: 15.8%;
-  left: 30.2%;
-  width: 39.6%;
-  height: 12.2%;
-  border-radius: 34px;
-  background:
-    radial-gradient(circle at center, rgba(255, 247, 226, 0.96), rgba(255, 217, 151, 0.92) 78%),
-    linear-gradient(180deg, rgba(255, 244, 216, 0.92), rgba(255, 214, 143, 0.9));
-  box-shadow:
-    inset 0 2px 8px rgba(255, 255, 255, 0.3),
-    0 1px 4px rgba(178, 104, 24, 0.06);
+  display: none;
 }
 
 .machine-total {
   position: absolute;
-  top: 17%;
+  top: 12%;
   left: 50%;
   transform: translateX(-50%);
-  min-width: 3.2ch;
+  width: 43%;
   text-align: center;
-  font-size: clamp(1.9rem, 4.1vw, 3.35rem);
+  font-size: clamp(2rem, 4.3vw, 3.55rem);
   font-weight: 900;
   letter-spacing: -0.04em;
+  line-height: 1;
   color: #a92b03;
   text-shadow: 0 2px 10px rgba(255, 235, 175, 0.44);
+  white-space: nowrap;
 }
 
 .machine-meter {
   position: absolute;
-  top: 29.85%;
+  top: 31.8%;
   left: 50%;
-  width: 19.1%;
-  height: 35.9%;
+  width: 19.05%;
+  height: 32.95%;
   transform: translateX(-50%);
-  border-radius: 24px;
+  border-radius: 22px;
   overflow: hidden;
+  clip-path: inset(0 round 22px);
+  isolation: isolate;
 }
 
 .machine-meter__fill {
   position: absolute;
   inset: auto 0 0;
   height: 0%;
-  border-radius: 20px 20px 12px 12px;
+  border-radius: 18px 18px 10px 10px;
   background: linear-gradient(
     180deg,
     #58cf21 0%,
@@ -239,20 +226,6 @@ img {
     0 0 20px rgba(255, 240, 125, 0.72),
     0 0 34px rgba(101, 230, 96, 0.24),
     inset 0 0 14px rgba(255, 255, 255, 0.2);
-}
-
-.page-shell.is-complete .machine-display-mask,
-.page-shell.is-complete .machine-total,
-.page-shell.is-complete .machine-meter {
-  opacity: 0;
-}
-
-.page-shell.is-complete .machine-image--base {
-  animation: machine-hide 240ms 520ms ease forwards;
-}
-
-.page-shell.is-complete .machine-image--complete {
-  animation: machine-reveal 320ms 520ms ease forwards;
 }
 
 .controls-column {
@@ -342,11 +315,6 @@ img {
   border-radius: 30px;
 }
 
-.money-decor {
-  width: clamp(96px, 10vw, 160px);
-  align-self: start;
-}
-
 .money-sprite {
   user-select: none;
   pointer-events: none;
@@ -362,6 +330,10 @@ img {
   width: 100%;
   max-width: 156px;
   filter: drop-shadow(0 12px 12px rgba(128, 69, 24, 0.13));
+}
+
+.money-button--ten {
+  width: clamp(96px, 10vw, 160px);
 }
 
 .money-sprite--note {
@@ -487,24 +459,6 @@ img {
   }
 }
 
-@keyframes machine-hide {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes machine-reveal {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 @keyframes next-pulse {
   0%,
   100% {
@@ -574,7 +528,7 @@ img {
     row-gap: 28px;
   }
 
-  .money-decor {
+  .money-button--ten {
     grid-column: 3;
     width: clamp(88px, 24vw, 130px);
   }

@@ -224,9 +224,9 @@ img {
 .ticket-bay {
   position: absolute;
   left: 50%;
-  bottom: 6%;
-  width: 13.5%;
-  height: 15%;
+  bottom: 1.8%;
+  width: 12%;
+  height: 20%;
   transform: translateX(-50%);
   overflow: hidden;
   pointer-events: none;
@@ -236,13 +236,33 @@ img {
 .ticket-prize {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 8%;
+  width: 92%;
+  opacity: 0;
+  transform: translate(-50%, 110%);
+  transform-origin: center bottom;
+}
+
+.ticket-prize__image {
   width: 100%;
   max-width: none;
-  opacity: 0;
-  transform: translate(-50%, 78%);
-  transform-origin: center bottom;
   filter: drop-shadow(0 8px 12px rgba(121, 67, 24, 0.22));
+}
+
+.ticket-prize__text {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  font-size: clamp(0.28rem, 0.56vw, 0.42rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  color: #f07328;
+  text-shadow:
+    0 1px 0 rgba(255, 246, 220, 0.72),
+    0 0 2px rgba(255, 223, 175, 0.46);
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
 }
 
 .confetti-layer {
@@ -289,13 +309,6 @@ img {
 }
 
 .page-shell.is-complete .machine-meter__fill {
-  background: linear-gradient(
-    180deg,
-    #fff9a2 0%,
-    #fff066 24%,
-    #ffd83a 58%,
-    #ffbf20 100%
-  );
   box-shadow:
     0 0 14px rgba(255, 248, 155, 0.56),
     0 0 28px rgba(255, 224, 72, 0.48),
@@ -308,8 +321,8 @@ img {
     linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent 44%, rgba(255, 252, 216, 0.22));
 }
 
-.page-shell.is-complete .ticket-prize {
-  animation: ticket-rise 620ms cubic-bezier(0.16, 1, 0.3, 1) 1120ms forwards;
+.page-shell.is-ticket-visible .ticket-prize {
+  animation: ticket-rise 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .controls-column {
@@ -592,14 +605,14 @@ img {
 @keyframes ticket-rise {
   0% {
     opacity: 0;
-    transform: translate(-50%, 105%);
+    transform: translate(-50%, 110%);
   }
-  32% {
+  20% {
     opacity: 1;
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translate(-50%, 26%);
   }
 }
 

@@ -23,6 +23,7 @@ let total = 0;
 let selectedDenomination = null;
 let audioContext = null;
 let confettiCleanupTimer = 0;
+let ticketRevealTimer = 0;
 
 const pageShell = document.querySelector(".page-shell");
 const gameTitle = document.getElementById("gameTitle");
@@ -109,6 +110,11 @@ function refreshPhase() {
 
   pageShell.classList.toggle("is-near-complete", total >= 8 && total < GOAL_TOTAL);
   pageShell.classList.toggle("is-complete", isComplete);
+
+  if (!isComplete) {
+    pageShell.classList.remove("is-ticket-visible");
+  }
+
   nextButton.disabled = !isComplete;
 }
 
@@ -196,6 +202,12 @@ function clearConfettiBurst() {
   confettiLayer.replaceChildren();
 }
 
+function clearTicketReveal() {
+  window.clearTimeout(ticketRevealTimer);
+  ticketRevealTimer = 0;
+  pageShell.classList.remove("is-ticket-visible");
+}
+
 function launchConfettiBurst() {
   if (!confettiLayer) {
     return;
@@ -238,8 +250,13 @@ function launchConfettiBurst() {
 }
 
 function runSuccessSequence() {
+  clearTicketReveal();
   playSuccessChime();
   launchConfettiBurst();
+  ticketRevealTimer = window.setTimeout(() => {
+    pageShell.classList.add("is-ticket-visible");
+    ticketRevealTimer = 0;
+  }, 1080);
 }
 
 function restartAnimation(button, className) {
@@ -292,6 +309,7 @@ function handleMoneyClick(event) {
 
 function resetGame() {
   clearConfettiBurst();
+  clearTicketReveal();
   total = 0;
   selectedDenomination = null;
   updateGame("Pick a new denomination for the next round.");

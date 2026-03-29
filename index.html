@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Money Meter</title>
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=10" />
   </head>
   <body>
     <div class="page-shell">
@@ -54,6 +54,24 @@
                   <div class="machine-meter__fill" id="meterFill"></div>
                   <div class="machine-meter__shine"></div>
                 </div>
+
+                <div class="ticket-bay" aria-hidden="true">
+                  <div class="ticket-prize">
+                    <img
+                      class="ticket-prize__image"
+                      src="assets/ticket.png"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <span class="ticket-prize__text">TICKET</span>
+                  </div>
+                </div>
+
+                <div
+                  class="confetti-layer"
+                  id="confettiLayer"
+                  aria-hidden="true"
+                ></div>
               </div>
 
               <div class="assistive-copy sr-only">
@@ -152,6 +170,6 @@
       </main>
     </div>
 
-    <script src="script.js?v=6"></script>
+    <script src="script.js?v=10"></script>
   </body>
 </html>

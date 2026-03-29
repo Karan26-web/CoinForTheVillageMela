@@ -1,4 +1,11 @@
 const GOAL_TOTAL = 10;
+const confettiColors = Object.freeze([
+  "#ff6b35",
+  "#ffd447",
+  "#58d36a",
+  "#49b8ff",
+  "#ff7ac6",
+]);
 
 const assetPaths = Object.freeze([
   "assets/Background.png",
@@ -9,11 +16,13 @@ const assetPaths = Object.freeze([
   "assets/₹5.png",
   "assets/₹10Coin.png",
   "assets/₹10Note.png",
+  "assets/ticket.png",
 ]);
 
 let total = 0;
 let selectedDenomination = null;
 let audioContext = null;
+let confettiCleanupTimer = 0;
 
 const pageShell = document.querySelector(".page-shell");
 const gameTitle = document.getElementById("gameTitle");
@@ -23,6 +32,7 @@ const machineTotal = document.getElementById("machineTotal");
 const meterFill = document.getElementById("meterFill");
 const machineMeter = document.getElementById("machineMeter");
 const nextButton = document.getElementById("nextButton");
+const confettiLayer = document.getElementById("confettiLayer");
 const moneyButtons = [...document.querySelectorAll(".money-button")];
 
 function preloadAssets() {
@@ -74,12 +84,13 @@ function refreshButtons() {
 
   moneyButtons.forEach((button) => {
     const value = Number(button.dataset.value);
-    const isSelected = selectedDenomination === value;
-    const isLocked = selectedDenomination !== null && value !== selectedDenomination;
+    const isSelected = !isComplete && selectedDenomination === value;
+    const isLocked =
+      isComplete || (selectedDenomination !== null && value !== selectedDenomination);
 
     button.classList.toggle("is-selected", isSelected);
     button.classList.toggle("is-locked", isLocked);
-    button.classList.toggle("is-complete-choice", isComplete && isSelected);
+    button.classList.toggle("is-complete-locked", isComplete);
     button.setAttribute("aria-pressed", String(isSelected));
     button.disabled = isComplete;
   });
@@ -175,6 +186,62 @@ function playSuccessChime() {
   }, 90);
 }
 
+function clearConfettiBurst() {
+  if (!confettiLayer) {
+    return;
+  }
+
+  window.clearTimeout(confettiCleanupTimer);
+  confettiCleanupTimer = 0;
+  confettiLayer.replaceChildren();
+}
+
+function launchConfettiBurst() {
+  if (!confettiLayer) {
+    return;
+  }
+
+  clearConfettiBurst();
+
+  const particleCount = 14;
+  const fragment = document.createDocumentFragment();
+
+  for (let index = 0; index < particleCount; index += 1) {
+    const piece = document.createElement("span");
+    const spreadProgress = particleCount === 1 ? 0.5 : index / (particleCount - 1);
+    const angle = (-130 + spreadProgress * 80) * (Math.PI / 180);
+    const distance = 58 + Math.random() * 84;
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance - 26;
+
+    piece.className = "confetti-piece";
+
+    if (index % 4 === 0) {
+      piece.classList.add("confetti-piece--dot");
+    }
+
+    piece.style.setProperty("--tx", `${x.toFixed(1)}px`);
+    piece.style.setProperty("--ty", `${y.toFixed(1)}px`);
+    piece.style.setProperty("--rot", `${(-180 + Math.random() * 360).toFixed(1)}deg`);
+    piece.style.setProperty("--size", `${(8 + Math.random() * 7).toFixed(1)}px`);
+    piece.style.setProperty("--delay", `${Math.round(Math.random() * 110)}ms`);
+    piece.style.setProperty(
+      "--color",
+      confettiColors[index % confettiColors.length],
+    );
+
+    fragment.appendChild(piece);
+  }
+
+  confettiLayer.appendChild(fragment);
+  confettiCleanupTimer = window.setTimeout(clearConfettiBurst, 1200);
+}
+
+function runSuccessSequence() {
+  playSuccessChime();
+  launchConfettiBurst();
+}
+
 function restartAnimation(button, className) {
   button.classList.remove(className);
   void button.offsetWidth;
@@ -219,11 +286,12 @@ function handleMoneyClick(event) {
   restartAnimation(button, "is-bouncing");
 
   if (total === GOAL_TOTAL) {
-    playSuccessChime();
+    runSuccessSequence();
   }
 }
 
 function resetGame() {
+  clearConfettiBurst();
   total = 0;
   selectedDenomination = null;
   updateGame("Pick a new denomination for the next round.");

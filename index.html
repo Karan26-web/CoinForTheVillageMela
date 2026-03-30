@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Money Meter</title>
-    <link rel="stylesheet" href="styles.css?v=14" />
+    <link rel="stylesheet" href="styles.css?v=49" />
   </head>
   <body>
     <div class="page-shell is-selection-view">
@@ -46,25 +46,23 @@
 
             <div class="level-actions">
               <button
-                class="action-button action-button--secondary"
+                class="action-button action-button--secondary action-button--back"
                 type="button"
                 id="backButton"
+                aria-label="Back"
               >
-                Back to Rides
-              </button>
-              <button
-                class="action-button action-button--primary"
-                type="button"
-                id="restartButton"
-              >
-                Restart Ride
+                <span class="action-button__arrow" aria-hidden="true">&#8592;</span>
+                <span class="sr-only">Back</span>
               </button>
             </div>
 
             <div class="board-layout">
               <section class="machine-column" aria-label="Money meter machine">
                 <div class="machine-wrap">
+                  <div class="machine-goal" id="machineGoal" aria-hidden="true">₹0</div>
+
                   <img
+                    id="machineImage"
                     class="machine-image machine-image--base"
                     src="assets/RealMAchine.png"
                     alt="Money meter machine"
@@ -108,13 +106,46 @@
               </section>
 
               <section class="controls-column">
+                <section class="drop-panel" aria-label="Drop money here">
+                  <div
+                    class="machine-dropzone"
+                    id="machineDropZone"
+                    aria-label="Drop money into the machine"
+                  >
+                    <p class="machine-dropzone__hint" id="dropZoneHint">
+                      Drag and Drop here
+                    </p>
+                    <div
+                      class="placed-money-layer"
+                      id="placedMoneyLayer"
+                      aria-hidden="true"
+                    ></div>
+                    <button
+                      class="undo-button"
+                      type="button"
+                      id="undoButton"
+                      aria-label="Undo last drop"
+                    >
+                      <img
+                        class="undo-button__image"
+                        src="assets/UNdobutton.png"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span class="sr-only">Undo</span>
+                    </button>
+                  </div>
+                </section>
+
                 <section class="controls-panel" aria-label="Choose a denomination">
                   <div class="money-tray">
                     <button
                       class="money-button money-button--coin"
                       type="button"
                       data-value="1"
+                      data-money-kind="coin-1"
                       aria-label="₹1 coin"
+                      draggable="true"
                     >
                       <img
                         class="money-sprite money-sprite--coin"
@@ -129,7 +160,9 @@
                       class="money-button money-button--coin"
                       type="button"
                       data-value="2"
+                      data-money-kind="coin-2"
                       aria-label="₹2 coin"
+                      draggable="true"
                     >
                       <img
                         class="money-sprite money-sprite--coin"
@@ -144,7 +177,9 @@
                       class="money-button money-button--coin"
                       type="button"
                       data-value="5"
+                      data-money-kind="coin-5"
                       aria-label="₹5 coin"
+                      draggable="true"
                     >
                       <img
                         class="money-sprite money-sprite--coin"
@@ -159,7 +194,9 @@
                       class="money-button money-button--coin money-button--ten"
                       type="button"
                       data-value="10"
+                      data-money-kind="coin-10"
                       aria-label="₹10 coin"
+                      draggable="true"
                     >
                       <img
                         class="money-sprite money-sprite--decor"
@@ -174,7 +211,9 @@
                       class="money-button money-button--note"
                       type="button"
                       data-value="10"
+                      data-money-kind="note-10"
                       aria-label="₹10 note"
+                      draggable="true"
                     >
                       <img
                         class="money-sprite money-sprite--note"
@@ -184,18 +223,84 @@
                       />
                       <span class="money-button__lock" aria-hidden="true">🔒</span>
                     </button>
+
+                    <button
+                      class="money-button money-button--note money-button--note-wide"
+                      type="button"
+                      data-value="20"
+                      data-money-kind="note-20"
+                      aria-label="₹20 note"
+                      draggable="true"
+                    >
+                      <img
+                        class="money-sprite money-sprite--note"
+                        src="assets/₹20.png"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span class="money-button__lock" aria-hidden="true">🔒</span>
+                    </button>
                   </div>
                 </section>
 
-                <p class="sr-only" id="selectionHint">Tap any denomination to begin.</p>
+                <p class="sr-only" id="selectionHint">
+                  Drag or tap any denomination to begin.
+                </p>
               </section>
+            </div>
+
+            <button
+              class="check-button"
+              type="button"
+              id="checkButton"
+              aria-label="Check"
+            >
+              <span
+                class="check-button__label"
+                id="checkButtonLabel"
+                aria-hidden="true"
+              ></span>
+              <span class="sr-only">Check</span>
+            </button>
+
+            <div
+              class="success-popup"
+              id="successPopup"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="successPopupTitle"
+              aria-describedby="successPopupSubtitle"
+              aria-hidden="true"
+            >
+              <div class="success-popup__burst" aria-hidden="true">
+                <span class="success-popup__spark success-popup__spark--1"></span>
+                <span class="success-popup__spark success-popup__spark--2"></span>
+                <span class="success-popup__spark success-popup__spark--3"></span>
+                <span class="success-popup__spark success-popup__spark--4"></span>
+                <span class="success-popup__spark success-popup__spark--5"></span>
+                <span class="success-popup__spark success-popup__spark--6"></span>
+              </div>
+
+              <div class="success-popup__panel">
+                <div class="success-popup__icon-shell" aria-hidden="true">
+                  <div class="success-popup__icon-glow"></div>
+                  <div class="success-popup__icon" id="successPopupIcon">⭐</div>
+                </div>
+
+                <div class="success-popup__copy">
+                  <p class="success-popup__title" id="successPopupTitle">Great Job!</p>
+                  <p class="success-popup__subtitle" id="successPopupSubtitle">
+                    Your ticket is ready!
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
         </section>
       </main>
     </div>
 
-    <script src="gameLogic.js?v=2"></script>
-    <script src="script.js?v=15"></script>
+    <script src="gameLogic.js?v=4"></script>
+    <script src="script.js?v=33"></script>
   </body>
 </html>

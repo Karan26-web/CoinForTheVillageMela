@@ -63,6 +63,7 @@ test("mixed levels allow any combination to reach the target", () => {
   const result = applySequence(
     {
       targetAmount: 13,
+      overflowTolerance: 3,
       ruleType: LEVEL_RULE_TYPES.MIXED,
     },
     [10, 2, 1],
@@ -77,6 +78,7 @@ test("mixed levels allow any combination to reach the target", () => {
 test("mixed levels keep every denomination available until completion", () => {
   const state = createInitialRoundState({
     targetAmount: 20,
+    overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
   });
 
@@ -84,17 +86,38 @@ test("mixed levels keep every denomination available until completion", () => {
   assert.equal(isMoneyMeterSelectionLocked(state, 2), false);
   assert.equal(isMoneyMeterSelectionLocked(state, 5), false);
   assert.equal(isMoneyMeterSelectionLocked(state, 10), false);
+  assert.equal(isMoneyMeterSelectionLocked(state, 20), false);
 });
 
-test("overflow is rejected against the active level target", () => {
+test("mixed levels allow overshoot within the active tolerance", () => {
+  const move = evaluateMoneyMeterMove(
+    {
+      targetAmount: 7,
+      overflowTolerance: 3,
+      ruleType: LEVEL_RULE_TYPES.MIXED,
+      total: 0,
+      selectedDenomination: null,
+    },
+    10,
+  );
+
+  assert.equal(move.accepted, true);
+  assert.equal(move.reason, "progress");
+  assert.equal(move.nextState.total, 10);
+  assert.equal(move.nextState.isComplete, false);
+  assert.equal(move.nextState.isOverflowing, true);
+});
+
+test("overflow is rejected when it goes beyond the active tolerance", () => {
   const move = evaluateMoneyMeterMove(
     {
       targetAmount: 13,
+      overflowTolerance: 3,
       ruleType: LEVEL_RULE_TYPES.MIXED,
       total: 12,
       selectedDenomination: null,
     },
-    2,
+    5,
   );
 
   assert.equal(move.accepted, false);

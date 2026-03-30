@@ -1,6 +1,7 @@
 (function attachMoneyMeterGameLogic(globalScope) {
   const DEFAULT_TARGET_AMOUNT = 10;
-  const VALID_DENOMINATIONS = Object.freeze([1, 2, 5, 10]);
+  const DEFAULT_OVERFLOW_TOLERANCE = 0;
+  const VALID_DENOMINATIONS = Object.freeze([1, 2, 5, 10, 20]);
   const LEVEL_RULE_TYPES = Object.freeze({
     SAME_DENOMINATION: "same-denomination",
     MIXED: "mixed",
@@ -18,6 +19,13 @@
       : DEFAULT_TARGET_AMOUNT;
   }
 
+  function sanitizeOverflowTolerance(value) {
+    const numericValue = Number(value);
+    return Number.isInteger(numericValue) && numericValue >= 0
+      ? numericValue
+      : DEFAULT_OVERFLOW_TOLERANCE;
+  }
+
   function isValidDenomination(value) {
     return VALID_DENOMINATIONS.includes(value);
   }
@@ -28,21 +36,27 @@
 
   function createRoundState({
     targetAmount = DEFAULT_TARGET_AMOUNT,
+    overflowTolerance = DEFAULT_OVERFLOW_TOLERANCE,
     ruleType = LEVEL_RULE_TYPES.SAME_DENOMINATION,
     total = 0,
     selectedDenomination = null,
   } = {}) {
     return Object.freeze({
       targetAmount,
+      overflowTolerance,
       ruleType,
       total,
       selectedDenomination,
       isComplete: total === targetAmount,
+      isOverflowing: total > targetAmount,
     });
   }
 
   function normalizeRoundState(state) {
     const targetAmount = sanitizeTargetAmount(state && state.targetAmount);
+    const overflowTolerance = sanitizeOverflowTolerance(
+      state && state.overflowTolerance,
+    );
     const total = Number(state && state.total);
     const rawRuleType = state && state.ruleType;
     const ruleType = isValidRuleType(rawRuleType)
@@ -57,6 +71,7 @@
 
     return createRoundState({
       targetAmount,
+      overflowTolerance,
       ruleType,
       total: Number.isInteger(total) && total >= 0 ? total : 0,
       selectedDenomination:
@@ -92,6 +107,8 @@
     const denomination = sanitizeDenomination(clickedValue);
     const usesStrictRule =
       currentState.ruleType === LEVEL_RULE_TYPES.SAME_DENOMINATION;
+    const allowedMaximum =
+      currentState.targetAmount + currentState.overflowTolerance;
 
     if (currentState.isComplete) {
       return buildRejectedMove(currentState, "complete");
@@ -109,13 +126,14 @@
       return buildRejectedMove(currentState, "mixed-denomination");
     }
 
-    if (currentState.total + denomination > currentState.targetAmount) {
+    if (currentState.total + denomination > allowedMaximum) {
       return buildRejectedMove(currentState, "overflow");
     }
 
     const nextTotal = currentState.total + denomination;
     const nextState = createRoundState({
       targetAmount: currentState.targetAmount,
+      overflowTolerance: currentState.overflowTolerance,
       ruleType: currentState.ruleType,
       total: nextTotal,
       selectedDenomination: usesStrictRule

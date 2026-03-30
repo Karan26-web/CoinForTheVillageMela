@@ -11,6 +11,7 @@ const LEVELS = Object.freeze([
     id: "merry-go-round",
     name: "Merry-Go-Round",
     targetAmount: 10,
+    overflowTolerance: 0,
     ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
     icon: "🎠",
   }),
@@ -18,6 +19,7 @@ const LEVELS = Object.freeze([
     id: "rainbow-slide",
     name: "Rainbow-Slide",
     targetAmount: 13,
+    overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🌈",
   }),
@@ -25,6 +27,7 @@ const LEVELS = Object.freeze([
     id: "giant-wheel",
     name: "Giant-Wheel",
     targetAmount: 7,
+    overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🎡",
   }),
@@ -32,6 +35,7 @@ const LEVELS = Object.freeze([
     id: "bumper-car",
     name: "Bumper-Car",
     targetAmount: 20,
+    overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🚗",
   }),
@@ -51,11 +55,16 @@ const assetPaths = Object.freeze([
   "assets/Background.png",
   "assets/RealMAchine.png",
   "assets/banner.png",
+  "assets/Dragarea.png",
+  "assets/moneyContainer.png",
+  "assets/CheckButton.png",
+  "assets/UNdobutton.png",
   "assets/₹1.png",
   "assets/₹2.png",
   "assets/₹5.png",
   "assets/₹10Coin.png",
   "assets/₹10Note.png",
+  "assets/₹20.png",
   "assets/ticket.png",
 ]);
 
@@ -66,6 +75,11 @@ let audioContext = null;
 let confettiCleanupTimer = 0;
 let ticketRevealTimer = 0;
 let returnToSelectionTimer = 0;
+let placedMoney = [];
+let activeDragMoney = null;
+let isRoundResolved = false;
+let isRetryMode = false;
+let isSuccessPopupOpen = false;
 
 const pageShell = document.querySelector(".page-shell");
 const gameTitle = document.getElementById("gameTitle");
@@ -75,16 +89,83 @@ const gameScreen = document.getElementById("gameScreen");
 const rideList = document.getElementById("rideList");
 const levelName = document.getElementById("levelName");
 const selectionHint = document.getElementById("selectionHint");
+const machineGoal = document.getElementById("machineGoal");
+const machineImage = document.getElementById("machineImage");
 const machineTotal = document.getElementById("machineTotal");
 const meterFill = document.getElementById("meterFill");
 const machineMeter = document.getElementById("machineMeter");
+const machineDropZone = document.getElementById("machineDropZone");
+const dropZoneHint = document.getElementById("dropZoneHint");
+const placedMoneyLayer = document.getElementById("placedMoneyLayer");
 const backButton = document.getElementById("backButton");
-const restartButton = document.getElementById("restartButton");
+const undoButton = document.getElementById("undoButton");
+const checkButton = document.getElementById("checkButton");
+const checkButtonLabel = document.getElementById("checkButtonLabel");
 const confettiLayer = document.getElementById("confettiLayer");
+const successPopup = document.getElementById("successPopup");
+const successPopupIcon = document.getElementById("successPopupIcon");
+const successPopupTitle = document.getElementById("successPopupTitle");
+const successPopupSubtitle = document.getElementById("successPopupSubtitle");
 const moneyButtons = [...document.querySelectorAll(".money-button")];
+const moneyButtonByKind = new Map(
+  moneyButtons.map((button) => [button.dataset.moneyKind, button]),
+);
+const moneyDefinitions = new Map(
+  moneyButtons.map((button) => {
+    const sprite = button.querySelector(".money-sprite");
+
+    return [
+      button.dataset.moneyKind,
+      Object.freeze({
+        kind: button.dataset.moneyKind,
+        value: Number(button.dataset.value),
+        label: button.getAttribute("aria-label") || formatDenomination(Number(button.dataset.value)),
+        src: sprite instanceof HTMLImageElement ? sprite.getAttribute("src") || "" : "",
+        isNote: button.classList.contains("money-button--note"),
+      }),
+    ];
+  }),
+);
 
 function getActiveLevel() {
   return activeLevelId ? levelLookup.get(activeLevelId) ?? null : null;
+}
+
+function getMoneyDefinition(kind) {
+  return moneyDefinitions.get(kind) ?? null;
+}
+
+function createMoneySelectionFromButton(button) {
+  const definition = getMoneyDefinition(button.dataset.moneyKind);
+
+  if (!definition) {
+    return null;
+  }
+
+  return {
+    kind: definition.kind,
+    value: definition.value,
+  };
+}
+
+function rebuildRoundStateFromPlacedMoney(level, items) {
+  let nextState = createInitialRoundState(level);
+
+  items.forEach((item) => {
+    const move = evaluateMoneyMeterMove(nextState, item.value);
+    nextState = move.accepted ? move.nextState : nextState;
+  });
+
+  return nextState;
+}
+
+function clearActiveDragState() {
+  activeDragMoney = null;
+  moneyButtons.forEach((button) => button.classList.remove("is-dragging"));
+
+  if (machineDropZone) {
+    machineDropZone.classList.remove("is-ready", "is-drop-target");
+  }
 }
 
 function preloadAssets() {
@@ -99,7 +180,15 @@ function formatRupees(value) {
 }
 
 function formatDenomination(value) {
-  return value === 10 ? "₹10" : `₹${value} coin`;
+  return value >= 10 ? `₹${value}` : `₹${value} coin`;
+}
+
+function getOverflowAmount(level, total) {
+  if (!level) {
+    return 0;
+  }
+
+  return Math.max(0, total - level.targetAmount);
 }
 
 function getRuleBadgeText(ruleType) {
@@ -157,6 +246,7 @@ function renderRideList() {
     }
 
     button.innerHTML = `
+      <span class="ride-card__track" aria-hidden="true"></span>
       <span class="ride-card__icon-shell" aria-hidden="true">
         <span class="ride-card__icon">${level.icon}</span>
       </span>
@@ -193,24 +283,41 @@ function refreshMessages(customStatusMessage = "") {
     return;
   }
 
-  if (gameState.isComplete) {
-    statusMessage.textContent = `${level.name} complete! Returning to ride selection...`;
+  if (isRetryMode) {
+    statusMessage.textContent =
+      customStatusMessage ||
+      `Not the right price for ${level.name}. Press Try Again to restart this ride.`;
     selectionHint.textContent =
-      "Ticket earned. This ride will be marked complete on the selection board.";
+      "Wrong total. Press Try Again to clear the money and start this ride again.";
+    return;
+  }
+
+  if (gameState.isComplete) {
+    if (isRoundResolved) {
+      statusMessage.textContent = `${level.name} complete! Returning to ride selection...`;
+      selectionHint.textContent =
+        "Ticket earned. This ride will be marked complete on the selection board.";
+    } else {
+      statusMessage.textContent = `Perfect total collected for ${level.name}. Press Check to finish the ride.`;
+      selectionHint.textContent =
+        "Use Check to confirm the total, or Undo to remove the last money item.";
+    }
     return;
   }
 
   if (customStatusMessage) {
     statusMessage.textContent = customStatusMessage;
+  } else if (gameState.total > level.targetAmount) {
+    statusMessage.textContent = `${formatRupees(getOverflowAmount(level, gameState.total))} too much. Press Check to see the result, or Undo to fix it.`;
   } else if (level.ruleType === LEVEL_RULE_TYPES.MIXED) {
     const remaining = level.targetAmount - gameState.total;
     statusMessage.textContent =
       gameState.total === 0
-        ? `Mix any coins to reach ${formatRupees(level.targetAmount)}.`
+        ? `Drag or tap any money into the tray to reach ${formatRupees(level.targetAmount)}.`
         : `${formatRupees(remaining)} left. You can use any combination of coins.`;
   } else if (gameState.selectedDenomination === null) {
     statusMessage.textContent =
-      "Tap any valid coin to begin. That first coin will lock the whole ride.";
+      "Drag or tap any valid coin to begin. That first coin will lock the whole ride.";
   } else if (isRoundStuck()) {
     const remaining = level.targetAmount - gameState.total;
     statusMessage.textContent = `${formatRupees(remaining)} left, but another ${formatRupees(gameState.selectedDenomination)} would go over. Restart this ride and choose a different first coin.`;
@@ -224,8 +331,10 @@ function refreshMessages(customStatusMessage = "") {
   }
 
   selectionHint.textContent =
-    level.ruleType === LEVEL_RULE_TYPES.MIXED
-      ? "Mixed ride: every denomination stays available until you hit the target."
+    gameState.total > level.targetAmount
+      ? "Overflow! The meter has gone past the target. Press Check or Undo the last money item."
+      : level.ruleType === LEVEL_RULE_TYPES.MIXED
+      ? "Mixed ride: drag or tap denominations into the tray, then press Check."
       : gameState.selectedDenomination === null
         ? "Same Coin Only ride: the first valid coin decides the only denomination you can keep using."
         : `Locked to ${formatDenomination(gameState.selectedDenomination)} for this ride.`;
@@ -233,6 +342,7 @@ function refreshMessages(customStatusMessage = "") {
 
 function refreshButtons() {
   const level = getActiveLevel();
+  const isInteractionLocked = !level || isRoundResolved || isRetryMode;
 
   moneyButtons.forEach((button) => {
     const value = Number(button.dataset.value);
@@ -255,35 +365,46 @@ function refreshButtons() {
     button.classList.toggle("is-overflow-blocked", isOverflowBlocked);
     button.classList.toggle(
       "is-complete-locked",
-      Boolean(level) && gameState.isComplete,
+      Boolean(level) && (gameState.isComplete || isRoundResolved),
     );
     button.setAttribute("aria-pressed", String(isSelected));
-    button.disabled = !preview.accepted;
+    button.disabled = isInteractionLocked || !preview.accepted;
+    button.draggable = Boolean(level) && !isInteractionLocked && preview.accepted;
   });
 }
 
 function refreshMeter() {
   const level = getActiveLevel();
   const targetAmount = level ? level.targetAmount : 10;
+  const overflowTolerance = level ? gameState.overflowTolerance || 0 : 0;
   const currentTotal = level ? gameState.total : 0;
+  const maxMeterTotal = targetAmount + overflowTolerance;
   const fillAmount = level ? (currentTotal / targetAmount) * 100 : 0;
+  const maxFillAmount = level ? (maxMeterTotal / targetAmount) * 100 : 100;
+  const isOverflowing = Boolean(level) && currentTotal > targetAmount;
 
-  meterFill.style.height = `${fillAmount}%`;
-  machineMeter.setAttribute("aria-valuemax", String(targetAmount));
+  meterFill.style.height = `${Math.min(fillAmount, maxFillAmount)}%`;
+  machineMeter.classList.toggle("is-overflowing", isOverflowing);
+  machineMeter.setAttribute("aria-valuemax", String(maxMeterTotal));
   machineMeter.setAttribute("aria-valuenow", String(currentTotal));
   machineMeter.setAttribute(
     "aria-valuetext",
     level
-      ? `${formatRupees(currentTotal)} out of ${formatRupees(targetAmount)}`
+      ? isOverflowing
+        ? `${formatRupees(currentTotal)} collected, ${formatRupees(currentTotal - targetAmount)} over the target of ${formatRupees(targetAmount)}`
+        : `${formatRupees(currentTotal)} out of ${formatRupees(targetAmount)}`
       : "No ride selected",
   );
+  if (machineGoal) {
+    machineGoal.textContent = formatRupees(targetAmount);
+  }
   machineTotal.textContent = formatRupees(currentTotal);
 }
 
 function refreshPhase() {
   const level = getActiveLevel();
   const isGameView = Boolean(level);
-  const isComplete = isGameView && gameState.isComplete;
+  const isComplete = isGameView && isRoundResolved;
   const completionRatio = isGameView ? gameState.total / level.targetAmount : 0;
 
   selectionScreen.hidden = isGameView;
@@ -291,9 +412,13 @@ function refreshPhase() {
 
   pageShell.classList.toggle("is-selection-view", !isGameView);
   pageShell.classList.toggle("is-game-view", isGameView);
+  pageShell.classList.remove("is-success-view");
   pageShell.classList.toggle(
     "is-near-complete",
-    isGameView && !isComplete && completionRatio >= 0.8,
+    isGameView &&
+      !isComplete &&
+      !gameState.isComplete &&
+      completionRatio >= 0.8,
   );
   pageShell.classList.toggle("is-complete", isComplete);
 
@@ -301,13 +426,116 @@ function refreshPhase() {
     pageShell.classList.remove("is-ticket-visible");
   }
 
-  backButton.disabled = !isGameView;
-  restartButton.disabled = !isGameView;
+  backButton.disabled = !isGameView || isSuccessPopupOpen;
 }
 
-function clearReturnToSelection() {
-  window.clearTimeout(returnToSelectionTimer);
-  returnToSelectionTimer = 0;
+function refreshDropZone() {
+  const level = getActiveLevel();
+
+  if (!machineDropZone || !dropZoneHint) {
+    return;
+  }
+
+  machineDropZone.classList.toggle("has-money", placedMoney.length > 0);
+  machineDropZone.setAttribute(
+    "aria-disabled",
+    String(!level || gameState.isComplete || isRetryMode),
+  );
+
+  if (!level) {
+    dropZoneHint.textContent = "Drag or tap money to add it here";
+    return;
+  }
+
+  if (isRetryMode) {
+    dropZoneHint.textContent = "Wrong total. Press Try Again.";
+    return;
+  }
+
+  if (gameState.isComplete) {
+    dropZoneHint.textContent = isRoundResolved
+      ? "Target reached. Ticket unlocked."
+      : "Perfect total. Press Check.";
+    return;
+  }
+
+  if (gameState.total > level.targetAmount) {
+    dropZoneHint.textContent = `${formatRupees(getOverflowAmount(level, gameState.total))} too much in ${level.name}`;
+    return;
+  }
+
+  const remaining = level.targetAmount - gameState.total;
+  dropZoneHint.textContent =
+    placedMoney.length === 0
+      ? "Drag and Drop here"
+      : `${formatRupees(remaining)} left in ${level.name}`;
+}
+
+function renderPlacedMoney() {
+  if (!placedMoneyLayer) {
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  placedMoney.forEach((item) => {
+    const definition = getMoneyDefinition(item.kind);
+
+    if (!definition || !definition.src) {
+      return;
+    }
+
+    const piece = document.createElement("span");
+    const image = document.createElement("img");
+
+    piece.className = "placed-money";
+    image.className = definition.isNote
+      ? "placed-money__sprite placed-money__sprite--note"
+      : "placed-money__sprite placed-money__sprite--coin";
+    image.src = definition.src;
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+
+    piece.appendChild(image);
+    fragment.appendChild(piece);
+  });
+
+  placedMoneyLayer.replaceChildren(fragment);
+}
+
+function refreshUndoButton() {
+  const level = getActiveLevel();
+
+  if (!undoButton) {
+    return;
+  }
+
+  undoButton.disabled =
+    !level ||
+    placedMoney.length === 0 ||
+    isRoundResolved ||
+    isRetryMode;
+}
+
+function refreshCheckButton() {
+  const level = getActiveLevel();
+
+  if (!checkButton) {
+    return;
+  }
+
+  const canRetry = Boolean(level) && isRetryMode && !isRoundResolved;
+
+  checkButton.classList.toggle("is-retry", canRetry);
+  checkButton.setAttribute("aria-label", canRetry ? "Try Again" : "Check");
+
+  if (checkButtonLabel) {
+    checkButtonLabel.textContent = canRetry ? "Try Again" : "";
+  }
+
+  checkButton.disabled = canRetry
+    ? false
+    : !level || placedMoney.length === 0 || isRoundResolved;
 }
 
 function playTone({ frequency, duration, type = "triangle", gainLevel = 0.07, sweepTo }) {
@@ -364,6 +592,26 @@ function playDeniedSound() {
   });
 }
 
+function playWrongAnswerBuzz() {
+  playTone({
+    frequency: 280,
+    duration: 0.12,
+    type: "sawtooth",
+    gainLevel: 0.045,
+    sweepTo: 220,
+  });
+
+  window.setTimeout(() => {
+    playTone({
+      frequency: 220,
+      duration: 0.18,
+      type: "sawtooth",
+      gainLevel: 0.05,
+      sweepTo: 140,
+    });
+  }, 70);
+}
+
 function playSuccessChime() {
   playTone({
     frequency: 523.25,
@@ -398,12 +646,55 @@ function clearTicketReveal() {
   window.clearTimeout(ticketRevealTimer);
   ticketRevealTimer = 0;
   pageShell.classList.remove("is-ticket-visible");
+
+  if (machineImage) {
+    machineImage.src = "assets/RealMAchine.png";
+  }
+}
+
+function clearSuccessPopup() {
+  isSuccessPopupOpen = false;
+  pageShell.classList.remove("is-success-popup-visible");
+
+  if (!successPopup) {
+    return;
+  }
+
+  successPopup.setAttribute("aria-hidden", "true");
+}
+
+function clearReturnToSelection() {
+  window.clearTimeout(returnToSelectionTimer);
+  returnToSelectionTimer = 0;
 }
 
 function clearRoundEffects() {
   clearConfettiBurst();
   clearTicketReveal();
+  clearSuccessPopup();
   clearReturnToSelection();
+}
+
+function showSuccessPopup(level) {
+  if (
+    !successPopup ||
+    !successPopupTitle ||
+    !successPopupSubtitle ||
+    !successPopupIcon ||
+    !level
+  ) {
+    return;
+  }
+
+  isSuccessPopupOpen = true;
+  successPopupTitle.textContent = "Great Job!";
+  successPopupSubtitle.textContent = `${level.name} ticket unlocked!`;
+  successPopupIcon.textContent = "⭐";
+  successPopup.setAttribute("aria-hidden", "false");
+
+  pageShell.classList.remove("is-success-popup-visible");
+  void successPopup.offsetWidth;
+  pageShell.classList.add("is-success-popup-visible");
 }
 
 function launchConfettiBurst() {
@@ -448,13 +739,21 @@ function launchConfettiBurst() {
 }
 
 function runSuccessSequence() {
+  const level = getActiveLevel();
+  if (!level) {
+    return;
+  }
+
   clearTicketReveal();
+  clearSuccessPopup();
   playSuccessChime();
   launchConfettiBurst();
+  showSuccessPopup(level);
+
   ticketRevealTimer = window.setTimeout(() => {
     pageShell.classList.add("is-ticket-visible");
     ticketRevealTimer = 0;
-  }, 1080);
+  }, 140);
 }
 
 function scheduleReturnToSelection() {
@@ -468,7 +767,7 @@ function scheduleReturnToSelection() {
 
     completedLevelIds.add(completedLevel.id);
     showSelectionScreen(`${completedLevel.name} is complete! Choose another ride.`);
-  }, 2200);
+  }, 2400);
 }
 
 function restartAnimation(button, className) {
@@ -485,6 +784,10 @@ function updateGame(customStatusMessage = "") {
   refreshMessages(customStatusMessage);
   refreshButtons();
   refreshPhase();
+  renderPlacedMoney();
+  refreshDropZone();
+  refreshUndoButton();
+  refreshCheckButton();
 }
 
 function startLevel(levelId) {
@@ -495,18 +798,26 @@ function startLevel(levelId) {
   }
 
   clearRoundEffects();
+  clearActiveDragState();
   activeLevelId = levelId;
+  placedMoney = [];
+  isRoundResolved = false;
+  isRetryMode = false;
   gameState = createInitialRoundState(level);
   updateGame(
     level.ruleType === LEVEL_RULE_TYPES.MIXED
-      ? `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Mix any coins you like.`
+      ? `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Drag or tap any money you like.`
       : `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Your first valid coin will lock the ride.`,
   );
 }
 
 function showSelectionScreen(customStatusMessage = "") {
   clearRoundEffects();
+  clearActiveDragState();
   activeLevelId = null;
+  placedMoney = [];
+  isRoundResolved = false;
+  isRetryMode = false;
   gameState = createInitialRoundState();
   updateGame(customStatusMessage || getSelectionScreenStatus());
 }
@@ -518,10 +829,14 @@ function restartActiveLevel() {
   }
 
   clearRoundEffects();
+  clearActiveDragState();
+  placedMoney = [];
+  isRoundResolved = false;
+  isRetryMode = false;
   gameState = createInitialRoundState(level);
   updateGame(
     level.ruleType === LEVEL_RULE_TYPES.MIXED
-      ? `${level.name} restarted. Mix any coins to reach ${formatRupees(level.targetAmount)}.`
+      ? `${level.name} restarted. Drag or tap any money to reach ${formatRupees(level.targetAmount)}.`
       : `${level.name} restarted. Pick a first coin carefully because it will lock the whole ride.`,
   );
 }
@@ -535,36 +850,239 @@ function handleRideSelection(event) {
   startLevel(button.dataset.levelId);
 }
 
-function handleMoneyClick(event) {
+function attemptMoneyPlacement(moneySelection, sourceButton) {
   const level = getActiveLevel();
-  const button = event.currentTarget;
-  const clickedValue = Number(button.dataset.value);
+  const button = sourceButton || moneyButtonByKind.get(moneySelection?.kind) || null;
 
-  if (!level) {
+  if (!level || !moneySelection || isRetryMode || isRoundResolved) {
     return;
   }
 
-  const move = evaluateMoneyMeterMove(gameState, clickedValue);
+  const move = evaluateMoneyMeterMove(gameState, moneySelection.value);
 
   if (!move.accepted) {
     playDeniedSound();
-    restartAnimation(button, "is-denied");
+    if (button) {
+      restartAnimation(button, "is-denied");
+    }
     return;
   }
 
+  placedMoney = [...placedMoney, moneySelection];
   gameState = move.nextState;
-  playTapSound(clickedValue);
+  playTapSound(moneySelection.value);
   updateGame();
-  restartAnimation(button, "is-bouncing");
 
-  if (gameState.isComplete) {
-    runSuccessSequence();
-    scheduleReturnToSelection();
+  if (button) {
+    restartAnimation(button, "is-bouncing");
+  }
+
+  if (gameState.total > level.targetAmount) {
+    updateGame(
+      `Oops! That's ${formatRupees(getOverflowAmount(level, gameState.total))} too much for ${level.name}. Press Check or Undo.`,
+    );
+  } else if (gameState.isComplete) {
+    updateGame(`Perfect total for ${level.name}. Press Check to finish the ride.`);
   } else if (isRoundStuck()) {
     updateGame(
-      `That choice locked the ride to ${formatDenomination(gameState.selectedDenomination)}. Restart this ride to try a different first coin.`,
+      `That choice locked the ride to ${formatDenomination(gameState.selectedDenomination)}. Use Undo or Restart to try a different first coin.`,
     );
   }
+}
+
+function handleMoneyClick(event) {
+  const button = event.currentTarget;
+  attemptMoneyPlacement(createMoneySelectionFromButton(button), button);
+}
+
+function undoLastDrop() {
+  const level = getActiveLevel();
+
+  if (
+    !level ||
+    placedMoney.length === 0 ||
+    isRoundResolved ||
+    isRetryMode
+  ) {
+    return;
+  }
+
+  clearRoundEffects();
+  placedMoney = placedMoney.slice(0, -1);
+  isRoundResolved = false;
+  gameState = rebuildRoundStateFromPlacedMoney(level, placedMoney);
+
+  updateGame(
+    placedMoney.length === 0
+      ? "Last drop removed. Drag or tap a denomination to start again."
+      : `Last drop removed. ${formatRupees(level.targetAmount - gameState.total)} left in ${level.name}.`,
+  );
+}
+
+function getDragSelection(event) {
+  if (activeDragMoney) {
+    return activeDragMoney;
+  }
+
+  if (!event.dataTransfer) {
+    return null;
+  }
+
+  const rawPayload = event.dataTransfer.getData("text/plain");
+
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsedPayload = JSON.parse(rawPayload);
+    const definition = getMoneyDefinition(parsedPayload.kind);
+
+    if (!definition) {
+      return null;
+    }
+
+    return {
+      kind: definition.kind,
+      value: definition.value,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function handleMoneyDragStart(event) {
+  const button = event.currentTarget;
+
+  if (!(button instanceof HTMLButtonElement) || button.disabled) {
+    event.preventDefault();
+    return;
+  }
+
+  const selection = createMoneySelectionFromButton(button);
+
+  if (!selection) {
+    event.preventDefault();
+    return;
+  }
+
+  activeDragMoney = selection;
+  button.classList.add("is-dragging");
+
+  if (machineDropZone) {
+    machineDropZone.classList.add("is-ready");
+  }
+
+  if (!event.dataTransfer) {
+    return;
+  }
+
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", JSON.stringify(selection));
+
+  const sprite = button.querySelector(".money-sprite");
+
+  if (sprite instanceof HTMLImageElement) {
+    event.dataTransfer.setDragImage(
+      sprite,
+      sprite.clientWidth / 2 || 40,
+      sprite.clientHeight / 2 || 40,
+    );
+  }
+}
+
+function handleMoneyDragEnd() {
+  clearActiveDragState();
+}
+
+function handleDropZoneDragOver(event) {
+  if (!getActiveLevel() || isRetryMode || isRoundResolved) {
+    return;
+  }
+
+  const selection = getDragSelection(event);
+
+  if (!selection) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move";
+  }
+
+  machineDropZone?.classList.add("is-drop-target");
+}
+
+function handleDropZoneDragLeave(event) {
+  const nextTarget = event.relatedTarget;
+
+  if (nextTarget instanceof Node && machineDropZone?.contains(nextTarget)) {
+    return;
+  }
+
+  machineDropZone?.classList.remove("is-drop-target");
+}
+
+function handleDropZoneDrop(event) {
+  const selection = getDragSelection(event);
+
+  clearActiveDragState();
+
+  if (!selection) {
+    return;
+  }
+
+  event.preventDefault();
+  attemptMoneyPlacement(selection, moneyButtonByKind.get(selection.kind));
+}
+
+function handleCheck() {
+  const level = getActiveLevel();
+
+  if (!level || isRoundResolved) {
+    return;
+  }
+
+  if (isRetryMode) {
+    restartActiveLevel();
+    return;
+  }
+
+  if (placedMoney.length === 0) {
+    return;
+  }
+
+  if (gameState.isComplete) {
+    isRoundResolved = true;
+    isRetryMode = false;
+    runSuccessSequence();
+    updateGame(`${level.name} complete! Returning to ride selection...`);
+    scheduleReturnToSelection();
+    return;
+  }
+
+  isRetryMode = true;
+  playWrongAnswerBuzz();
+
+  if (gameState.total > level.targetAmount) {
+    updateGame(
+      `${formatRupees(getOverflowAmount(level, gameState.total))} too much for ${level.name}. Press Try Again.`,
+    );
+    return;
+  }
+
+  if (isRoundStuck()) {
+    updateGame(
+      `That set cannot reach ${formatRupees(level.targetAmount)}. Press Try Again to restart ${level.name}.`,
+    );
+    return;
+  }
+
+  updateGame(
+    `${formatRupees(level.targetAmount)} was needed, but this total is ${formatRupees(gameState.total)}. Press Try Again.`,
+  );
 }
 
 function init() {
@@ -575,13 +1093,20 @@ function init() {
 
   moneyButtons.forEach((button) => {
     button.addEventListener("click", handleMoneyClick);
+    button.addEventListener("dragstart", handleMoneyDragStart);
+    button.addEventListener("dragend", handleMoneyDragEnd);
   });
+
+  machineDropZone?.addEventListener("dragover", handleDropZoneDragOver);
+  machineDropZone?.addEventListener("dragleave", handleDropZoneDragLeave);
+  machineDropZone?.addEventListener("drop", handleDropZoneDrop);
 
   backButton.addEventListener("click", () => {
     showSelectionScreen("Choose another ride when you are ready.");
   });
 
-  restartButton.addEventListener("click", restartActiveLevel);
+  undoButton?.addEventListener("click", undoLastDrop);
+  checkButton?.addEventListener("click", handleCheck);
 }
 
 init();

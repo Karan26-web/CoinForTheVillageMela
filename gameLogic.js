@@ -39,14 +39,12 @@
     overflowTolerance = DEFAULT_OVERFLOW_TOLERANCE,
     ruleType = LEVEL_RULE_TYPES.SAME_DENOMINATION,
     total = 0,
-    selectedDenomination = null,
   } = {}) {
     return Object.freeze({
       targetAmount,
       overflowTolerance,
       ruleType,
       total,
-      selectedDenomination,
       isComplete: total === targetAmount,
       isOverflowing: total > targetAmount,
     });
@@ -62,23 +60,11 @@
     const ruleType = isValidRuleType(rawRuleType)
       ? rawRuleType
       : LEVEL_RULE_TYPES.SAME_DENOMINATION;
-    const rawDenomination =
-      state && state.selectedDenomination !== undefined
-        ? state.selectedDenomination
-        : null;
-    const selectedDenomination =
-      rawDenomination === null ? null : sanitizeDenomination(rawDenomination);
-
     return createRoundState({
       targetAmount,
       overflowTolerance,
       ruleType,
       total: Number.isInteger(total) && total >= 0 ? total : 0,
-      selectedDenomination:
-        ruleType === LEVEL_RULE_TYPES.SAME_DENOMINATION &&
-        isValidDenomination(selectedDenomination)
-          ? selectedDenomination
-          : null,
     });
   }
 
@@ -105,29 +91,9 @@
   function evaluateMoneyMeterMove(state, clickedValue) {
     const currentState = normalizeRoundState(state);
     const denomination = sanitizeDenomination(clickedValue);
-    const usesStrictRule =
-      currentState.ruleType === LEVEL_RULE_TYPES.SAME_DENOMINATION;
-    const allowedMaximum =
-      currentState.targetAmount + currentState.overflowTolerance;
-
-    if (currentState.isComplete) {
-      return buildRejectedMove(currentState, "complete");
-    }
 
     if (!isValidDenomination(denomination)) {
       return buildRejectedMove(currentState, "invalid-denomination");
-    }
-
-    if (
-      usesStrictRule &&
-      currentState.selectedDenomination !== null &&
-      denomination !== currentState.selectedDenomination
-    ) {
-      return buildRejectedMove(currentState, "mixed-denomination");
-    }
-
-    if (currentState.total + denomination > allowedMaximum) {
-      return buildRejectedMove(currentState, "overflow");
     }
 
     const nextTotal = currentState.total + denomination;
@@ -136,42 +102,16 @@
       overflowTolerance: currentState.overflowTolerance,
       ruleType: currentState.ruleType,
       total: nextTotal,
-      selectedDenomination: usesStrictRule
-        ? currentState.selectedDenomination ?? denomination
-        : null,
     });
 
     return buildAcceptedMove(
       nextState,
       nextState.isComplete
         ? "win"
-        : usesStrictRule && currentState.selectedDenomination === null
-          ? "locked-denomination"
+        : nextState.isOverflowing
+          ? "overflow"
           : "progress",
     );
-  }
-
-  function isMoneyMeterSelectionLocked(state, clickedValue) {
-    const currentState = normalizeRoundState(state);
-    const denomination = sanitizeDenomination(clickedValue);
-
-    if (currentState.isComplete) {
-      return true;
-    }
-
-    if (!isValidDenomination(denomination)) {
-      return true;
-    }
-
-    if (currentState.ruleType !== LEVEL_RULE_TYPES.SAME_DENOMINATION) {
-      return false;
-    }
-
-    if (currentState.selectedDenomination === null) {
-      return false;
-    }
-
-    return denomination !== currentState.selectedDenomination;
   }
 
   const api = Object.freeze({
@@ -182,7 +122,6 @@
     createInitialRoundState,
     createInitialMoneyMeterState: createInitialRoundState,
     evaluateMoneyMeterMove,
-    isMoneyMeterSelectionLocked,
   });
 
   if (typeof module !== "undefined" && module.exports) {

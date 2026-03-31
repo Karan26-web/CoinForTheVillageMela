@@ -5,7 +5,6 @@ const {
   LEVEL_RULE_TYPES,
   createInitialRoundState,
   evaluateMoneyMeterMove,
-  isMoneyMeterSelectionLocked,
 } = require("./gameLogic.js");
 
 function applySequence(levelConfig, values) {
@@ -27,36 +26,35 @@ function applySequence(levelConfig, values) {
   };
 }
 
-test("same-denomination levels lock to the first coin and can win exactly", () => {
+test("same-denomination levels now accept mixed money and can win exactly", () => {
   const result = applySequence(
     {
       targetAmount: 10,
       ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
     },
-    [2, 2, 2, 2, 2],
+    [2, 5, 2, 1],
   );
 
+  assert.equal(result.moves.every((move) => move.accepted), true);
   assert.equal(result.state.total, 10);
-  assert.equal(result.state.selectedDenomination, 2);
   assert.equal(result.state.isComplete, true);
-  assert.equal(result.moves[0].reason, "locked-denomination");
   assert.equal(result.moves.at(-1).reason, "win");
 });
 
-test("same-denomination levels reject mixed coins after the first valid tap", () => {
+test("exact totals can still be exceeded before the round is checked", () => {
   const result = applySequence(
     {
-      targetAmount: 7,
+      targetAmount: 10,
       ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
     },
-    [2, 5, 2],
+    [5, 5, 1],
   );
 
-  assert.equal(result.moves[0].accepted, true);
-  assert.equal(result.moves[1].accepted, false);
-  assert.equal(result.moves[1].reason, "mixed-denomination");
-  assert.equal(result.state.total, 4);
-  assert.equal(result.state.selectedDenomination, 2);
+  assert.equal(result.moves.at(-1).accepted, true);
+  assert.equal(result.moves.at(-1).reason, "overflow");
+  assert.equal(result.state.total, 11);
+  assert.equal(result.state.isComplete, false);
+  assert.equal(result.state.isOverflowing, true);
 });
 
 test("mixed levels allow any combination to reach the target", () => {
@@ -70,58 +68,69 @@ test("mixed levels allow any combination to reach the target", () => {
   );
 
   assert.equal(result.state.total, 13);
-  assert.equal(result.state.selectedDenomination, null);
   assert.equal(result.state.isComplete, true);
   assert.equal(result.moves.at(-1).reason, "win");
 });
 
-test("mixed levels keep every denomination available until completion", () => {
+test("levels no longer lock the tray to a single denomination", () => {
   const state = createInitialRoundState({
     targetAmount: 20,
     overflowTolerance: 3,
-    ruleType: LEVEL_RULE_TYPES.MIXED,
+    ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
   });
 
-  assert.equal(isMoneyMeterSelectionLocked(state, 1), false);
-  assert.equal(isMoneyMeterSelectionLocked(state, 2), false);
-  assert.equal(isMoneyMeterSelectionLocked(state, 5), false);
-  assert.equal(isMoneyMeterSelectionLocked(state, 10), false);
-  assert.equal(isMoneyMeterSelectionLocked(state, 20), false);
+  [1, 2, 5, 10, 20].forEach((value) => {
+    const move = evaluateMoneyMeterMove(state, value);
+    assert.equal(move.accepted, true);
+  });
 });
 
-test("mixed levels allow overshoot within the active tolerance", () => {
+test("overflow is accepted immediately and marked as overflow", () => {
   const move = evaluateMoneyMeterMove(
     {
       targetAmount: 7,
-      overflowTolerance: 3,
       ruleType: LEVEL_RULE_TYPES.MIXED,
       total: 0,
-      selectedDenomination: null,
     },
     10,
   );
 
   assert.equal(move.accepted, true);
-  assert.equal(move.reason, "progress");
+  assert.equal(move.reason, "overflow");
   assert.equal(move.nextState.total, 10);
   assert.equal(move.nextState.isComplete, false);
   assert.equal(move.nextState.isOverflowing, true);
 });
 
-test("overflow is rejected when it goes beyond the active tolerance", () => {
+test("overflow keeps accepting more money beyond the old tolerance", () => {
   const move = evaluateMoneyMeterMove(
     {
       targetAmount: 13,
       overflowTolerance: 3,
       ruleType: LEVEL_RULE_TYPES.MIXED,
       total: 12,
-      selectedDenomination: null,
     },
     5,
   );
 
-  assert.equal(move.accepted, false);
+  assert.equal(move.accepted, true);
   assert.equal(move.reason, "overflow");
-  assert.equal(move.nextState.total, 12);
+  assert.equal(move.nextState.total, 17);
+  assert.equal(move.nextState.isOverflowing, true);
+});
+
+test("invalid denominations are still rejected", () => {
+  const move = evaluateMoneyMeterMove(
+    {
+      targetAmount: 13,
+      ruleType: LEVEL_RULE_TYPES.MIXED,
+      total: 4,
+    },
+    3,
+  );
+
+  assert.equal(move.accepted, false);
+  assert.equal(move.reason, "invalid-denomination");
+  assert.equal(move.nextState.total, 4);
   assert.equal(move.nextState.isComplete, false);
 });

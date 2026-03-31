@@ -1,9 +1,7 @@
 const {
   LEVEL_RULE_TYPES,
-  VALID_DENOMINATIONS,
   createInitialRoundState,
   evaluateMoneyMeterMove,
-  isMoneyMeterSelectionLocked,
 } = window.MoneyMeterGameLogic;
 
 const LEVELS = Object.freeze([
@@ -14,6 +12,7 @@ const LEVELS = Object.freeze([
     overflowTolerance: 0,
     ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
     icon: "🎠",
+    successScreenSrc: "assets/SuccessScreenMerrygoRound.png",
   }),
   Object.freeze({
     id: "rainbow-slide",
@@ -22,6 +21,7 @@ const LEVELS = Object.freeze([
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🌈",
+    successScreenSrc: "assets/SuccessScreenRainbowSlide.png",
   }),
   Object.freeze({
     id: "giant-wheel",
@@ -30,6 +30,7 @@ const LEVELS = Object.freeze([
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🎡",
+    successScreenSrc: "assets/SuccessScreneGiantwheel.png",
   }),
   Object.freeze({
     id: "bumper-car",
@@ -38,6 +39,7 @@ const LEVELS = Object.freeze([
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🚗",
+    successScreenSrc: "assets/SuccessScreenBumperCar.png",
   }),
 ]);
 
@@ -53,7 +55,12 @@ const confettiColors = Object.freeze([
 
 const assetPaths = Object.freeze([
   "assets/Background.png",
+  "assets/Background2.png",
   "assets/RealMAchine.png",
+  "assets/SuccessScreenMerrygoRound.png",
+  "assets/SuccessScreenRainbowSlide.png",
+  "assets/SuccessScreneGiantwheel.png",
+  "assets/SuccessScreenBumperCar.png",
   "assets/banner.png",
   "assets/Dragarea.png",
   "assets/moneyContainer.png",
@@ -74,6 +81,7 @@ let completedLevelIds = new Set();
 let audioContext = null;
 let confettiCleanupTimer = 0;
 let ticketRevealTimer = 0;
+let successPopupRevealTimer = 0;
 let returnToSelectionTimer = 0;
 let placedMoney = [];
 let activeDragMoney = null;
@@ -91,6 +99,7 @@ const levelName = document.getElementById("levelName");
 const selectionHint = document.getElementById("selectionHint");
 const machineGoal = document.getElementById("machineGoal");
 const machineImage = document.getElementById("machineImage");
+const machineWrap = document.querySelector(".machine-wrap");
 const machineTotal = document.getElementById("machineTotal");
 const meterFill = document.getElementById("meterFill");
 const machineMeter = document.getElementById("machineMeter");
@@ -103,7 +112,7 @@ const checkButton = document.getElementById("checkButton");
 const checkButtonLabel = document.getElementById("checkButtonLabel");
 const confettiLayer = document.getElementById("confettiLayer");
 const successPopup = document.getElementById("successPopup");
-const successPopupIcon = document.getElementById("successPopupIcon");
+const successPopupImage = document.getElementById("successPopupImage");
 const successPopupTitle = document.getElementById("successPopupTitle");
 const successPopupSubtitle = document.getElementById("successPopupSubtitle");
 const moneyButtons = [...document.querySelectorAll(".money-button")];
@@ -192,7 +201,7 @@ function getOverflowAmount(level, total) {
 }
 
 function getRuleBadgeText(ruleType) {
-  return ruleType === LEVEL_RULE_TYPES.MIXED ? "Mix Coins" : "Same Coin Only";
+  return "Any money allowed";
 }
 
 function getSelectionScreenStatus() {
@@ -206,21 +215,6 @@ function getSelectionScreenStatus() {
 
   const rideWord = completedLevelIds.size === 1 ? "ride" : "rides";
   return `${completedLevelIds.size} ${rideWord} complete. Choose another ride.`;
-}
-
-function getAvailableMoves(state) {
-  return VALID_DENOMINATIONS.filter(
-    (value) => evaluateMoneyMeterMove(state, value).accepted,
-  );
-}
-
-function isRoundStuck() {
-  const level = getActiveLevel();
-  if (!level || gameState.isComplete) {
-    return false;
-  }
-
-  return getAvailableMoves(gameState).length === 0;
 }
 
 function renderRideList() {
@@ -270,7 +264,12 @@ function refreshHeader() {
     return;
   }
 
-  gameTitle.textContent = `Help Aru make ${formatRupees(level.targetAmount)}`;
+  gameTitle.textContent =
+    gameState.total > level.targetAmount
+      ? "Oops ! That is too much."
+      : gameState.isComplete || isRoundResolved
+        ? "Perfect. Good job!"
+        : `Make ${formatRupees(level.targetAmount)} using any money.`;
   levelName.textContent = level.name;
 }
 
@@ -309,35 +308,18 @@ function refreshMessages(customStatusMessage = "") {
     statusMessage.textContent = customStatusMessage;
   } else if (gameState.total > level.targetAmount) {
     statusMessage.textContent = `${formatRupees(getOverflowAmount(level, gameState.total))} too much. Press Check to see the result, or Undo to fix it.`;
-  } else if (level.ruleType === LEVEL_RULE_TYPES.MIXED) {
+  } else {
     const remaining = level.targetAmount - gameState.total;
     statusMessage.textContent =
       gameState.total === 0
         ? `Drag or tap any money into the tray to reach ${formatRupees(level.targetAmount)}.`
-        : `${formatRupees(remaining)} left. You can use any combination of coins.`;
-  } else if (gameState.selectedDenomination === null) {
-    statusMessage.textContent =
-      "Drag or tap any valid coin to begin. That first coin will lock the whole ride.";
-  } else if (isRoundStuck()) {
-    const remaining = level.targetAmount - gameState.total;
-    statusMessage.textContent = `${formatRupees(remaining)} left, but another ${formatRupees(gameState.selectedDenomination)} would go over. Restart this ride and choose a different first coin.`;
-  } else {
-    const remaining = level.targetAmount - gameState.total;
-
-    statusMessage.textContent =
-      remaining === gameState.selectedDenomination
-        ? `So close! One more ${formatRupees(gameState.selectedDenomination)} gets you to ${formatRupees(level.targetAmount)}.`
-        : `${formatRupees(remaining)} left. Keep using only the ${formatDenomination(gameState.selectedDenomination)}.`;
+        : `${formatRupees(remaining)} left. Add any money you want.`;
   }
 
   selectionHint.textContent =
     gameState.total > level.targetAmount
-      ? "Overflow! The meter has gone past the target. Press Check or Undo the last money item."
-      : level.ruleType === LEVEL_RULE_TYPES.MIXED
-      ? "Mixed ride: drag or tap denominations into the tray, then press Check."
-      : gameState.selectedDenomination === null
-        ? "Same Coin Only ride: the first valid coin decides the only denomination you can keep using."
-        : `Locked to ${formatDenomination(gameState.selectedDenomination)} for this ride.`;
+      ? "Overflow! The meter has gone past the target and turned red. Press Check or Undo the last money item."
+      : "Add any money until you reach the target, then press Check.";
 }
 
 function refreshButtons() {
@@ -345,48 +327,33 @@ function refreshButtons() {
   const isInteractionLocked = !level || isRoundResolved || isRetryMode;
 
   moneyButtons.forEach((button) => {
-    const value = Number(button.dataset.value);
-    const preview = level
-      ? evaluateMoneyMeterMove(gameState, value)
-      : { accepted: false, reason: "inactive" };
-    const isRuleLocked = level
-      ? isMoneyMeterSelectionLocked(gameState, value)
-      : true;
-    const isOverflowBlocked =
-      Boolean(level) && !preview.accepted && preview.reason === "overflow";
-    const isSelected =
-      Boolean(level) &&
-      level.ruleType === LEVEL_RULE_TYPES.SAME_DENOMINATION &&
-      !gameState.isComplete &&
-      gameState.selectedDenomination === value;
-
-    button.classList.toggle("is-selected", isSelected);
-    button.classList.toggle("is-locked", isRuleLocked);
-    button.classList.toggle("is-overflow-blocked", isOverflowBlocked);
-    button.classList.toggle(
+    button.classList.remove(
+      "is-selected",
+      "is-locked",
+      "is-overflow-blocked",
       "is-complete-locked",
-      Boolean(level) && (gameState.isComplete || isRoundResolved),
     );
-    button.setAttribute("aria-pressed", String(isSelected));
-    button.disabled = isInteractionLocked || !preview.accepted;
-    button.draggable = Boolean(level) && !isInteractionLocked && preview.accepted;
+    button.classList.toggle("is-inactive", Boolean(level) && isInteractionLocked);
+    button.setAttribute("aria-pressed", "false");
+    button.disabled = !level || isInteractionLocked;
+    button.draggable = Boolean(level) && !isInteractionLocked;
   });
 }
 
 function refreshMeter() {
   const level = getActiveLevel();
   const targetAmount = level ? level.targetAmount : 10;
-  const overflowTolerance = level ? gameState.overflowTolerance || 0 : 0;
   const currentTotal = level ? gameState.total : 0;
-  const maxMeterTotal = targetAmount + overflowTolerance;
-  const fillAmount = level ? (currentTotal / targetAmount) * 100 : 0;
-  const maxFillAmount = level ? (maxMeterTotal / targetAmount) * 100 : 100;
+  const fillAmount = level ? Math.min((currentTotal / targetAmount) * 100, 100) : 0;
   const isOverflowing = Boolean(level) && currentTotal > targetAmount;
 
-  meterFill.style.height = `${Math.min(fillAmount, maxFillAmount)}%`;
+  meterFill.style.height = `${fillAmount}%`;
   machineMeter.classList.toggle("is-overflowing", isOverflowing);
-  machineMeter.setAttribute("aria-valuemax", String(maxMeterTotal));
-  machineMeter.setAttribute("aria-valuenow", String(currentTotal));
+  machineMeter.setAttribute("aria-valuemax", String(targetAmount));
+  machineMeter.setAttribute(
+    "aria-valuenow",
+    String(Math.min(currentTotal, targetAmount)),
+  );
   machineMeter.setAttribute(
     "aria-valuetext",
     level
@@ -396,7 +363,7 @@ function refreshMeter() {
       : "No ride selected",
   );
   if (machineGoal) {
-    machineGoal.textContent = formatRupees(targetAmount);
+    machineGoal.textContent = formatRupees(currentTotal);
   }
   machineTotal.textContent = formatRupees(currentTotal);
 }
@@ -594,22 +561,42 @@ function playDeniedSound() {
 
 function playWrongAnswerBuzz() {
   playTone({
-    frequency: 280,
-    duration: 0.12,
+    frequency: 168,
+    duration: 0.11,
     type: "sawtooth",
-    gainLevel: 0.045,
-    sweepTo: 220,
+    gainLevel: 0.08,
+    sweepTo: 118,
   });
 
   window.setTimeout(() => {
     playTone({
-      frequency: 220,
-      duration: 0.18,
+      frequency: 154,
+      duration: 0.11,
       type: "sawtooth",
-      gainLevel: 0.05,
-      sweepTo: 140,
+      gainLevel: 0.082,
+      sweepTo: 104,
     });
-  }, 70);
+  }, 58);
+
+  window.setTimeout(() => {
+    playTone({
+      frequency: 142,
+      duration: 0.13,
+      type: "sawtooth",
+      gainLevel: 0.085,
+      sweepTo: 94,
+    });
+  }, 116);
+
+  window.setTimeout(() => {
+    playTone({
+      frequency: 128,
+      duration: 0.16,
+      type: "triangle",
+      gainLevel: 0.062,
+      sweepTo: 82,
+    });
+  }, 170);
 }
 
 function playSuccessChime() {
@@ -653,6 +640,8 @@ function clearTicketReveal() {
 }
 
 function clearSuccessPopup() {
+  window.clearTimeout(successPopupRevealTimer);
+  successPopupRevealTimer = 0;
   isSuccessPopupOpen = false;
   pageShell.classList.remove("is-success-popup-visible");
 
@@ -660,7 +649,13 @@ function clearSuccessPopup() {
     return;
   }
 
+  successPopup.dataset.theme = "";
   successPopup.setAttribute("aria-hidden", "true");
+
+  if (successPopupImage) {
+    successPopupImage.removeAttribute("src");
+    successPopupImage.alt = "";
+  }
 }
 
 function clearReturnToSelection() {
@@ -680,16 +675,18 @@ function showSuccessPopup(level) {
     !successPopup ||
     !successPopupTitle ||
     !successPopupSubtitle ||
-    !successPopupIcon ||
+    !successPopupImage ||
     !level
   ) {
     return;
   }
 
   isSuccessPopupOpen = true;
+  successPopup.dataset.theme = level.id;
+  successPopupImage.src = level.successScreenSrc || "";
+  successPopupImage.alt = `${level.name} success screen`;
   successPopupTitle.textContent = "Great Job!";
   successPopupSubtitle.textContent = `${level.name} ticket unlocked!`;
-  successPopupIcon.textContent = "⭐";
   successPopup.setAttribute("aria-hidden", "false");
 
   pageShell.classList.remove("is-success-popup-visible");
@@ -746,14 +743,19 @@ function runSuccessSequence() {
 
   clearTicketReveal();
   clearSuccessPopup();
+  isSuccessPopupOpen = true;
   playSuccessChime();
   launchConfettiBurst();
-  showSuccessPopup(level);
 
   ticketRevealTimer = window.setTimeout(() => {
     pageShell.classList.add("is-ticket-visible");
     ticketRevealTimer = 0;
   }, 140);
+
+  successPopupRevealTimer = window.setTimeout(() => {
+    showSuccessPopup(level);
+    successPopupRevealTimer = 0;
+  }, 760);
 }
 
 function scheduleReturnToSelection() {
@@ -767,14 +769,18 @@ function scheduleReturnToSelection() {
 
     completedLevelIds.add(completedLevel.id);
     showSelectionScreen(`${completedLevel.name} is complete! Choose another ride.`);
-  }, 2400);
+  }, 4200);
 }
 
-function restartAnimation(button, className) {
-  button.classList.remove(className);
-  void button.offsetWidth;
-  button.classList.add(className);
-  window.setTimeout(() => button.classList.remove(className), 320);
+function restartAnimation(element, className, duration = 320) {
+  if (!element) {
+    return;
+  }
+
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+  window.setTimeout(() => element.classList.remove(className), duration);
 }
 
 function updateGame(customStatusMessage = "") {
@@ -805,9 +811,7 @@ function startLevel(levelId) {
   isRetryMode = false;
   gameState = createInitialRoundState(level);
   updateGame(
-    level.ruleType === LEVEL_RULE_TYPES.MIXED
-      ? `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Drag or tap any money you like.`
-      : `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Your first valid coin will lock the ride.`,
+    `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Drag or tap any money you like.`,
   );
 }
 
@@ -835,9 +839,7 @@ function restartActiveLevel() {
   isRetryMode = false;
   gameState = createInitialRoundState(level);
   updateGame(
-    level.ruleType === LEVEL_RULE_TYPES.MIXED
-      ? `${level.name} restarted. Drag or tap any money to reach ${formatRupees(level.targetAmount)}.`
-      : `${level.name} restarted. Pick a first coin carefully because it will lock the whole ride.`,
+    `${level.name} restarted. Drag or tap any money to reach ${formatRupees(level.targetAmount)}.`,
   );
 }
 
@@ -883,10 +885,6 @@ function attemptMoneyPlacement(moneySelection, sourceButton) {
     );
   } else if (gameState.isComplete) {
     updateGame(`Perfect total for ${level.name}. Press Check to finish the ride.`);
-  } else if (isRoundStuck()) {
-    updateGame(
-      `That choice locked the ride to ${formatDenomination(gameState.selectedDenomination)}. Use Undo or Restart to try a different first coin.`,
-    );
   }
 }
 
@@ -1065,17 +1063,11 @@ function handleCheck() {
 
   isRetryMode = true;
   playWrongAnswerBuzz();
+  restartAnimation(machineWrap, "is-wrong-answer", 440);
 
   if (gameState.total > level.targetAmount) {
     updateGame(
       `${formatRupees(getOverflowAmount(level, gameState.total))} too much for ${level.name}. Press Try Again.`,
-    );
-    return;
-  }
-
-  if (isRoundStuck()) {
-    updateGame(
-      `That set cannot reach ${formatRupees(level.targetAmount)}. Press Try Again to restart ${level.name}.`,
     );
     return;
   }

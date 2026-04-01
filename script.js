@@ -846,19 +846,44 @@ function playSuccessCue() {
     audio,
     successCueAudioConfig.fallbackDurationMs,
   );
+  const fallbackChimeDurationMs = 320;
 
   if (!audio) {
     playSuccessChime();
+    successCheerTimer = window.setTimeout(() => {
+      playSuccessCheer();
+      successCheerTimer = 0;
+    }, fallbackChimeDurationMs);
     return durationMs;
   }
 
   resetManagedAudio(audio);
 
+  const finishCue = () => {
+    if (!audio.onended) {
+      return;
+    }
+
+    audio.onended = null;
+    window.clearTimeout(successCheerTimer);
+    successCheerTimer = 0;
+    playSuccessCheer();
+  };
+
+  audio.onended = finishCue;
+  successCheerTimer = window.setTimeout(finishCue, durationMs + 80);
+
   const playPromise = audio.play();
 
   if (playPromise && typeof playPromise.catch === "function") {
     playPromise.catch(() => {
+      audio.onended = null;
+      window.clearTimeout(successCheerTimer);
       playSuccessChime();
+      successCheerTimer = window.setTimeout(() => {
+        playSuccessCheer();
+        successCheerTimer = 0;
+      }, fallbackChimeDurationMs);
     });
   }
 
@@ -1235,11 +1260,6 @@ function runSuccessSequence() {
     showSuccessPopup(level);
     successPopupRevealTimer = 0;
   }, successPopupDelayMs);
-
-  successCheerTimer = window.setTimeout(() => {
-    playSuccessCheer();
-    successCheerTimer = 0;
-  }, cueDurationMs);
 
   return totalDurationMs;
 }

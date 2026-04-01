@@ -3,8 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#6c3412" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Money Meter</title>
-    <link rel="stylesheet" href="styles.css?v=49" />
+    <link rel="manifest" href="site.webmanifest?v=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=61" />
   </head>
   <body>
     <div class="page-shell is-selection-view">
@@ -97,11 +107,6 @@
                     </div>
                   </div>
 
-                  <div
-                    class="confetti-layer"
-                    id="confettiLayer"
-                    aria-hidden="true"
-                  ></div>
                 </div>
               </section>
 
@@ -266,15 +271,6 @@
               aria-describedby="successPopupSubtitle"
               aria-hidden="true"
             >
-              <div class="success-popup__burst" aria-hidden="true">
-                <span class="success-popup__spark success-popup__spark--1"></span>
-                <span class="success-popup__spark success-popup__spark--2"></span>
-                <span class="success-popup__spark success-popup__spark--3"></span>
-                <span class="success-popup__spark success-popup__spark--4"></span>
-                <span class="success-popup__spark success-popup__spark--5"></span>
-                <span class="success-popup__spark success-popup__spark--6"></span>
-              </div>
-
               <div class="success-popup__screen">
                 <img
                   class="success-popup__image"
@@ -283,27 +279,6 @@
                   alt=""
                   decoding="async"
                 />
-                <div
-                  class="success-popup__lighting success-popup__lighting--base"
-                  aria-hidden="true"
-                ></div>
-                <div
-                  class="success-popup__lighting success-popup__lighting--beam success-popup__lighting--beam-1"
-                  aria-hidden="true"
-                ></div>
-                <div
-                  class="success-popup__lighting success-popup__lighting--beam success-popup__lighting--beam-2"
-                  aria-hidden="true"
-                ></div>
-                <div
-                  class="success-popup__lighting success-popup__lighting--glow success-popup__lighting--glow-1"
-                  aria-hidden="true"
-                ></div>
-                <div
-                  class="success-popup__lighting success-popup__lighting--glow success-popup__lighting--glow-2"
-                  aria-hidden="true"
-                ></div>
-
                 <div class="success-popup__caption">
                   <p class="success-popup__eyebrow">Ticket Unlocked</p>
                   <p class="success-popup__title" id="successPopupTitle">Great Job!</p>
@@ -316,9 +291,36 @@
           </section>
         </section>
       </main>
+
+      <div
+        class="confetti-layer"
+        id="confettiLayer"
+        aria-hidden="true"
+      ></div>
+    </div>
+
+    <div
+      class="landscape-lock"
+      id="landscapeLock"
+      aria-hidden="true"
+      aria-live="assertive"
+    >
+      <div
+        class="landscape-lock__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="landscapeLockTitle"
+        aria-describedby="landscapeLockMessage"
+      >
+        <div class="landscape-lock__device" aria-hidden="true"></div>
+        <h2 class="landscape-lock__title" id="landscapeLockTitle">Landscape Mode Only</h2>
+        <p class="landscape-lock__message" id="landscapeLockMessage">
+          Rotate your device sideways to continue playing the carnival game.
+        </p>
+      </div>
     </div>
 
     <script src="gameLogic.js?v=4"></script>
-    <script src="script.js?v=34"></script>
+    <script src="script.js?v=41"></script>
   </body>
 </html>

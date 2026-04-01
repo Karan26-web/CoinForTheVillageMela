@@ -12,6 +12,7 @@ const LEVELS = Object.freeze([
     overflowTolerance: 0,
     ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
     icon: "🎠",
+    cardImageSrc: "assets/Goround.png",
     successScreenSrc: "assets/SuccessScreenMerrygoRound.png",
   }),
   Object.freeze({
@@ -21,6 +22,7 @@ const LEVELS = Object.freeze([
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🌈",
+    cardImageSrc: "assets/RainbowSlide.png",
     successScreenSrc: "assets/SuccessScreenRainbowSlide.png",
   }),
   Object.freeze({
@@ -30,6 +32,7 @@ const LEVELS = Object.freeze([
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🎡",
+    cardImageSrc: "assets/GiantWheel.png",
     successScreenSrc: "assets/SuccessScreneGiantwheel.png",
   }),
   Object.freeze({
@@ -39,6 +42,7 @@ const LEVELS = Object.freeze([
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
     icon: "🚗",
+    cardImageSrc: "assets/BumperCar.png",
     successScreenSrc: "assets/SuccessScreenBumperCar.png",
   }),
 ]);
@@ -53,7 +57,10 @@ const confettiColors = Object.freeze([
   "#ff7ac6",
 ]);
 
+const successAudioPath = "audios/mykelu-crowd-cheering-383111.mp3";
+
 const assetPaths = Object.freeze([
+  "assets/TransitionScreenBG.png",
   "assets/Background.png",
   "assets/Background2.png",
   "assets/RealMAchine.png",
@@ -62,6 +69,10 @@ const assetPaths = Object.freeze([
   "assets/SuccessScreneGiantwheel.png",
   "assets/SuccessScreenBumperCar.png",
   "assets/banner.png",
+  "assets/Goround.png",
+  "assets/RainbowSlide.png",
+  "assets/GiantWheel.png",
+  "assets/BumperCar.png",
   "assets/Dragarea.png",
   "assets/moneyContainer.png",
   "assets/CheckButton.png",
@@ -80,6 +91,7 @@ let activeLevelId = null;
 let completedLevelIds = new Set();
 let audioContext = null;
 let confettiCleanupTimer = 0;
+let confettiWaveTimer = 0;
 let ticketRevealTimer = 0;
 let successPopupRevealTimer = 0;
 let returnToSelectionTimer = 0;
@@ -88,8 +100,10 @@ let activeDragMoney = null;
 let isRoundResolved = false;
 let isRetryMode = false;
 let isSuccessPopupOpen = false;
+let successAudio = null;
 
 const pageShell = document.querySelector(".page-shell");
+const landscapeLock = document.getElementById("landscapeLock");
 const gameTitle = document.getElementById("gameTitle");
 const statusMessage = document.getElementById("statusMessage");
 const selectionScreen = document.getElementById("selectionScreen");
@@ -135,6 +149,39 @@ const moneyDefinitions = new Map(
     ];
   }),
 );
+
+function isPortraitViewport() {
+  return window.innerHeight > window.innerWidth;
+}
+
+function updateLandscapeLockState() {
+  const isPortrait = isPortraitViewport();
+
+  document.body.classList.toggle("is-portrait-locked", isPortrait);
+  pageShell?.setAttribute("aria-hidden", isPortrait ? "true" : "false");
+  landscapeLock?.setAttribute("aria-hidden", isPortrait ? "false" : "true");
+
+  if (pageShell && "inert" in pageShell) {
+    pageShell.inert = isPortrait;
+  }
+}
+
+async function tryLockLandscapeOrientation() {
+  if (!screen.orientation || typeof screen.orientation.lock !== "function") {
+    return;
+  }
+
+  try {
+    await screen.orientation.lock("landscape");
+  } catch (_error) {
+    // Browsers can reject orientation locking outside app/standalone contexts.
+  }
+}
+
+function syncLandscapeMode() {
+  updateLandscapeLockState();
+  void tryLockLandscapeOrientation();
+}
 
 function getActiveLevel() {
   return activeLevelId ? levelLookup.get(activeLevelId) ?? null : null;
@@ -182,6 +229,12 @@ function preloadAssets() {
     const image = new Image();
     image.src = src;
   });
+
+  const audio = getSuccessAudio();
+
+  if (audio) {
+    audio.load();
+  }
 }
 
 function formatRupees(value) {
@@ -240,14 +293,16 @@ function renderRideList() {
     }
 
     button.innerHTML = `
-      <span class="ride-card__track" aria-hidden="true"></span>
-      <span class="ride-card__icon-shell" aria-hidden="true">
-        <span class="ride-card__icon">${level.icon}</span>
+      <span class="ride-card__media" aria-hidden="true">
+        <img
+          class="ride-card__image"
+          src="${level.cardImageSrc}"
+          alt=""
+          decoding="async"
+        />
       </span>
-      <span class="ride-card__copy">
-        <span class="ride-card__name">${level.name}</span>
-      </span>
-      <span class="ride-card__target">${formatRupees(level.targetAmount)}</span>
+      <span class="sr-only">${level.name} ${formatRupees(level.targetAmount)}</span>
+      ${isCompleted ? '<span class="ride-card__badge" aria-hidden="true">Done</span>' : ""}
     `;
 
     fragment.appendChild(button);
@@ -505,10 +560,10 @@ function refreshCheckButton() {
     : !level || placedMoney.length === 0 || isRoundResolved;
 }
 
-function playTone({ frequency, duration, type = "triangle", gainLevel = 0.07, sweepTo }) {
+function getAudioContext() {
   const AudioCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioCtor) {
-    return;
+    return null;
   }
 
   audioContext = audioContext || new AudioCtor();
@@ -517,9 +572,18 @@ function playTone({ frequency, duration, type = "triangle", gainLevel = 0.07, sw
     audioContext.resume().catch(() => {});
   }
 
-  const now = audioContext.currentTime;
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
+  return audioContext;
+}
+
+function playTone({ frequency, duration, type = "triangle", gainLevel = 0.07, sweepTo }) {
+  const context = getAudioContext();
+  if (!context) {
+    return;
+  }
+
+  const now = context.currentTime;
+  const oscillator = context.createOscillator();
+  const gainNode = context.createGain();
 
   oscillator.type = type;
   oscillator.frequency.setValueAtTime(frequency, now);
@@ -533,10 +597,56 @@ function playTone({ frequency, duration, type = "triangle", gainLevel = 0.07, sw
   gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
   oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
+  gainNode.connect(context.destination);
 
   oscillator.start(now);
   oscillator.stop(now + duration);
+}
+
+function playNoiseBurst({
+  startDelay = 0,
+  duration = 0.18,
+  gainLevel = 0.032,
+  centerFrequency = 1800,
+  q = 1.1,
+}) {
+  const context = getAudioContext();
+  if (!context) {
+    return;
+  }
+
+  const frameCount = Math.max(1, Math.floor(context.sampleRate * duration));
+  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+  const channel = buffer.getChannelData(0);
+
+  for (let index = 0; index < frameCount; index += 1) {
+    channel[index] = Math.random() * 2 - 1;
+  }
+
+  const source = context.createBufferSource();
+  const bandPass = context.createBiquadFilter();
+  const highPass = context.createBiquadFilter();
+  const gainNode = context.createGain();
+  const now = context.currentTime + startDelay;
+
+  source.buffer = buffer;
+  bandPass.type = "bandpass";
+  bandPass.frequency.setValueAtTime(centerFrequency, now);
+  bandPass.Q.setValueAtTime(q, now);
+  highPass.type = "highpass";
+  highPass.frequency.setValueAtTime(700, now);
+
+  gainNode.gain.setValueAtTime(0.0001, now);
+  gainNode.gain.exponentialRampToValueAtTime(gainLevel, now + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  source.connect(bandPass);
+  bandPass.connect(highPass);
+  highPass.connect(gainNode);
+  gainNode.connect(context.destination);
+
+  source.start(now);
+  source.stop(now + duration);
 }
 
 function playTapSound(value) {
@@ -619,13 +729,90 @@ function playSuccessChime() {
   }, 90);
 }
 
+function getSuccessAudio() {
+  if (typeof Audio === "undefined") {
+    return null;
+  }
+
+  if (!successAudio) {
+    successAudio = new Audio(successAudioPath);
+    successAudio.preload = "auto";
+    successAudio.volume = 0.92;
+  }
+
+  return successAudio;
+}
+
+function playFallbackSuccessCheer() {
+  playSuccessChime();
+
+  [
+    {
+      frequency: 622.25,
+      duration: 0.28,
+      type: "triangle",
+      gainLevel: 0.028,
+      sweepTo: 830.61,
+    },
+    {
+      frequency: 698.46,
+      duration: 0.24,
+      type: "sine",
+      gainLevel: 0.024,
+      sweepTo: 932.33,
+    },
+    {
+      frequency: 783.99,
+      duration: 0.26,
+      type: "triangle",
+      gainLevel: 0.022,
+      sweepTo: 1046.5,
+    },
+  ].forEach((tone, index) => {
+    window.setTimeout(() => {
+      playTone(tone);
+    }, 110 + index * 70);
+  });
+
+  [
+    { startDelay: 0.02, duration: 0.16, gainLevel: 0.022, centerFrequency: 2100 },
+    { startDelay: 0.14, duration: 0.2, gainLevel: 0.026, centerFrequency: 1700 },
+    { startDelay: 0.26, duration: 0.18, gainLevel: 0.02, centerFrequency: 2400 },
+    { startDelay: 0.38, duration: 0.22, gainLevel: 0.028, centerFrequency: 1500 },
+  ].forEach((burst) => {
+    playNoiseBurst(burst);
+  });
+}
+
+function playSuccessCheer() {
+  const audio = getSuccessAudio();
+
+  if (!audio) {
+    playFallbackSuccessCheer();
+    return;
+  }
+
+  audio.pause();
+  audio.currentTime = 0;
+
+  const playPromise = audio.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {
+      playFallbackSuccessCheer();
+    });
+  }
+}
+
 function clearConfettiBurst() {
   if (!confettiLayer) {
     return;
   }
 
   window.clearTimeout(confettiCleanupTimer);
+  window.clearTimeout(confettiWaveTimer);
   confettiCleanupTimer = 0;
+  confettiWaveTimer = 0;
   confettiLayer.replaceChildren();
 }
 
@@ -694,45 +881,45 @@ function showSuccessPopup(level) {
   pageShell.classList.add("is-success-popup-visible");
 }
 
-function launchConfettiBurst() {
+function launchConfettiBurst({ particleCount = 72, append = false } = {}) {
   if (!confettiLayer) {
     return;
   }
 
-  clearConfettiBurst();
+  if (!append) {
+    clearConfettiBurst();
+  }
 
-  const particleCount = 14;
   const fragment = document.createDocumentFragment();
 
   for (let index = 0; index < particleCount; index += 1) {
     const piece = document.createElement("span");
-    const spreadProgress = particleCount === 1 ? 0.5 : index / (particleCount - 1);
-    const angle = (-130 + spreadProgress * 80) * (Math.PI / 180);
-    const distance = 58 + Math.random() * 84;
-    const x = Math.cos(angle) * distance;
-    const y = Math.sin(angle) * distance - 26;
 
     piece.className = "confetti-piece";
 
-    if (index % 4 === 0) {
+    if (index % 5 === 0) {
       piece.classList.add("confetti-piece--dot");
     }
 
-    piece.style.setProperty("--tx", `${x.toFixed(1)}px`);
-    piece.style.setProperty("--ty", `${y.toFixed(1)}px`);
-    piece.style.setProperty("--rot", `${(-180 + Math.random() * 360).toFixed(1)}deg`);
-    piece.style.setProperty("--size", `${(8 + Math.random() * 7).toFixed(1)}px`);
-    piece.style.setProperty("--delay", `${Math.round(Math.random() * 110)}ms`);
+    piece.style.setProperty("--start-x", `${(6 + Math.random() * 88).toFixed(2)}%`);
+    piece.style.setProperty("--start-y", `${(-18 - Math.random() * 20).toFixed(2)}%`);
+    piece.style.setProperty("--tx", `${(-180 + Math.random() * 360).toFixed(1)}px`);
+    piece.style.setProperty("--ty", `${(108 + Math.random() * 16).toFixed(2)}%`);
+    piece.style.setProperty("--rot", `${(-320 + Math.random() * 640).toFixed(1)}deg`);
+    piece.style.setProperty("--size", `${(10 + Math.random() * 12).toFixed(1)}px`);
+    piece.style.setProperty("--delay", `${Math.round(Math.random() * 240)}ms`);
+    piece.style.setProperty("--duration", `${Math.round(1500 + Math.random() * 700)}ms`);
     piece.style.setProperty(
       "--color",
-      confettiColors[index % confettiColors.length],
+      confettiColors[Math.floor(Math.random() * confettiColors.length)],
     );
 
     fragment.appendChild(piece);
   }
 
   confettiLayer.appendChild(fragment);
-  confettiCleanupTimer = window.setTimeout(clearConfettiBurst, 1200);
+  window.clearTimeout(confettiCleanupTimer);
+  confettiCleanupTimer = window.setTimeout(clearConfettiBurst, 2900);
 }
 
 function runSuccessSequence() {
@@ -744,8 +931,12 @@ function runSuccessSequence() {
   clearTicketReveal();
   clearSuccessPopup();
   isSuccessPopupOpen = true;
-  playSuccessChime();
+  playSuccessCheer();
   launchConfettiBurst();
+  confettiWaveTimer = window.setTimeout(() => {
+    launchConfettiBurst({ particleCount: 44, append: true });
+    confettiWaveTimer = 0;
+  }, 260);
 
   ticketRevealTimer = window.setTimeout(() => {
     pageShell.classList.add("is-ticket-visible");
@@ -1079,6 +1270,7 @@ function handleCheck() {
 
 function init() {
   preloadAssets();
+  syncLandscapeMode();
   updateGame();
 
   rideList.addEventListener("click", handleRideSelection);
@@ -1099,6 +1291,29 @@ function init() {
 
   undoButton?.addEventListener("click", undoLastDrop);
   checkButton?.addEventListener("click", handleCheck);
+
+  window.addEventListener("resize", syncLandscapeMode, { passive: true });
+  window.addEventListener("orientationchange", syncLandscapeMode, { passive: true });
+  window.visualViewport?.addEventListener("resize", syncLandscapeMode, { passive: true });
+  window.addEventListener("pointerdown", () => {
+    void tryLockLandscapeOrientation();
+  }, { passive: true });
+
+  const orientationQuery = window.matchMedia?.("(orientation: portrait)");
+
+  if (orientationQuery) {
+    if (typeof orientationQuery.addEventListener === "function") {
+      orientationQuery.addEventListener("change", syncLandscapeMode);
+    } else if (typeof orientationQuery.addListener === "function") {
+      orientationQuery.addListener(syncLandscapeMode);
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      syncLandscapeMode();
+    }
+  });
 }
 
 init();

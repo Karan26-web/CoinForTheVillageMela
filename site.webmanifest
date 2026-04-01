@@ -1,0 +1,9 @@
+{
+  "name": "Money Meter",
+  "short_name": "Money Meter",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#f0c09a",
+  "theme_color": "#6c3412"
+}

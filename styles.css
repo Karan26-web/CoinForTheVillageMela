@@ -255,11 +255,6 @@ body.is-portrait-locked .landscape-lock {
   margin-top: clamp(36px, 5vw, 84px);
 }
 
-.selection-screen[hidden],
-.game-screen[hidden] {
-  display: none !important;
-}
-
 .selection-panel {
   width: min(100%, 1760px);
   margin: 0 auto;

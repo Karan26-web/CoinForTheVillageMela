@@ -66,12 +66,12 @@ const assetPaths = Object.freeze([
   "assets/moneyContainer.png",
   "assets/CheckButton.png",
   "assets/UNdobutton.png",
-  "assets/₹1.png",
-  "assets/₹2.png",
-  "assets/₹5.png",
-  "assets/₹10Coin.png",
-  "assets/₹10Note.png",
-  "assets/₹20.png",
+  "assets/1.png",
+  "assets/2.png",
+  "assets/5.png",
+  "assets/10Coin.png",
+  "assets/10Note.png",
+  "assets/20.png",
   "assets/ticket.png",
 ]);
 

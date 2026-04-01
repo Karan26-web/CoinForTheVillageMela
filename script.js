@@ -57,7 +57,17 @@ const confettiColors = Object.freeze([
   "#ff7ac6",
 ]);
 
-const successAudioPath = "audios/mykelu-crowd-cheering-383111.mp3";
+const successCueAudioConfig = Object.freeze({
+  path: "audios/Correct tap11.mp3",
+  fallbackDurationMs: 5643,
+  volume: 0.92,
+});
+
+const successCheerAudioConfig = Object.freeze({
+  path: "audios/mykelu-crowd-cheering-383111.mp3",
+  fallbackDurationMs: 5112,
+  volume: 0.9,
+});
 
 const assetPaths = Object.freeze([
   "assets/TransitionScreenBG.png",
@@ -94,13 +104,20 @@ let confettiCleanupTimer = 0;
 let confettiWaveTimer = 0;
 let ticketRevealTimer = 0;
 let successPopupRevealTimer = 0;
+let successCheerTimer = 0;
 let returnToSelectionTimer = 0;
 let placedMoney = [];
 let activeDragMoney = null;
 let isRoundResolved = false;
 let isRetryMode = false;
 let isSuccessPopupOpen = false;
-let successAudio = null;
+let successCueAudio = null;
+let successCheerAudio = null;
+let confettiCanvas = null;
+let confettiContext = null;
+let confettiAnimationFrame = 0;
+let confettiLastFrameTime = 0;
+let confettiParticles = [];
 
 const pageShell = document.querySelector(".page-shell");
 const landscapeLock = document.getElementById("landscapeLock");
@@ -180,6 +197,7 @@ async function tryLockLandscapeOrientation() {
 
 function syncLandscapeMode() {
   updateLandscapeLockState();
+  resizeConfettiCanvas();
   void tryLockLandscapeOrientation();
 }
 
@@ -230,11 +248,8 @@ function preloadAssets() {
     image.src = src;
   });
 
-  const audio = getSuccessAudio();
-
-  if (audio) {
-    audio.load();
-  }
+  getSuccessCueAudio()?.load();
+  getSuccessCrowdAudio()?.load();
 }
 
 function formatRupees(value) {
@@ -729,18 +744,59 @@ function playSuccessChime() {
   }, 90);
 }
 
-function getSuccessAudio() {
+function createManagedAudio({ path, volume }) {
   if (typeof Audio === "undefined") {
     return null;
   }
 
-  if (!successAudio) {
-    successAudio = new Audio(successAudioPath);
-    successAudio.preload = "auto";
-    successAudio.volume = 0.92;
+  const audio = new Audio(encodeURI(path));
+  audio.preload = "auto";
+  audio.volume = volume;
+  return audio;
+}
+
+function getSuccessCueAudio() {
+  if (!successCueAudio) {
+    successCueAudio = createManagedAudio(successCueAudioConfig);
   }
 
-  return successAudio;
+  return successCueAudio;
+}
+
+function getSuccessCrowdAudio() {
+  if (!successCheerAudio) {
+    successCheerAudio = createManagedAudio(successCheerAudioConfig);
+  }
+
+  return successCheerAudio;
+}
+
+function getAudioDurationMs(audio, fallbackDurationMs) {
+  if (audio && Number.isFinite(audio.duration) && audio.duration > 0) {
+    return Math.round(audio.duration * 1000);
+  }
+
+  return fallbackDurationMs;
+}
+
+function resetManagedAudio(audio) {
+  if (!audio) {
+    return;
+  }
+
+  audio.onended = null;
+  audio.pause();
+
+  try {
+    audio.currentTime = 0;
+  } catch (_error) {
+    // Some browsers can reject currentTime resets while metadata is pending.
+  }
+}
+
+function clearSuccessAudioPlayback() {
+  resetManagedAudio(successCueAudio);
+  resetManagedAudio(successCheerAudio);
 }
 
 function playFallbackSuccessCheer() {
@@ -784,16 +840,44 @@ function playFallbackSuccessCheer() {
   });
 }
 
+function playSuccessCue() {
+  const audio = getSuccessCueAudio();
+  const durationMs = getAudioDurationMs(
+    audio,
+    successCueAudioConfig.fallbackDurationMs,
+  );
+
+  if (!audio) {
+    playSuccessChime();
+    return durationMs;
+  }
+
+  resetManagedAudio(audio);
+
+  const playPromise = audio.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {
+      playSuccessChime();
+    });
+  }
+
+  return durationMs;
+}
+
 function playSuccessCheer() {
-  const audio = getSuccessAudio();
+  const audio = getSuccessCrowdAudio();
+  const durationMs = getAudioDurationMs(
+    audio,
+    successCheerAudioConfig.fallbackDurationMs,
+  );
 
   if (!audio) {
     playFallbackSuccessCheer();
-    return;
+    return durationMs;
   }
 
-  audio.pause();
-  audio.currentTime = 0;
+  resetManagedAudio(audio);
 
   const playPromise = audio.play();
 
@@ -802,18 +886,209 @@ function playSuccessCheer() {
       playFallbackSuccessCheer();
     });
   }
+
+  return durationMs;
 }
 
-function clearConfettiBurst() {
+function randomInRange(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function ensureConfettiCanvas() {
   if (!confettiLayer) {
+    return null;
+  }
+
+  if (!(confettiCanvas instanceof HTMLCanvasElement)) {
+    confettiCanvas = document.createElement("canvas");
+    confettiCanvas.className = "confetti-layer__canvas";
+    confettiCanvas.setAttribute("aria-hidden", "true");
+    confettiLayer.replaceChildren(confettiCanvas);
+    confettiContext = confettiCanvas.getContext("2d");
+  }
+
+  if (!confettiContext) {
+    confettiContext = confettiCanvas.getContext("2d");
+  }
+
+  if (!confettiContext) {
+    return null;
+  }
+
+  resizeConfettiCanvas();
+  return confettiContext;
+}
+
+function resizeConfettiCanvas() {
+  if (!confettiLayer || !confettiCanvas || !confettiContext) {
     return;
   }
 
+  const rect = confettiLayer.getBoundingClientRect();
+  const width = Math.max(1, Math.round(rect.width));
+  const height = Math.max(1, Math.round(rect.height));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const scaledWidth = Math.round(width * dpr);
+  const scaledHeight = Math.round(height * dpr);
+
+  if (confettiCanvas.width !== scaledWidth || confettiCanvas.height !== scaledHeight) {
+    confettiCanvas.width = scaledWidth;
+    confettiCanvas.height = scaledHeight;
+    confettiCanvas.style.width = `${width}px`;
+    confettiCanvas.style.height = `${height}px`;
+  }
+
+  confettiContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function createFireworkParticle(x, y, velocityScale = 1) {
+  const angle = randomInRange(0, Math.PI * 2);
+  const speed = randomInRange(180, 380) * velocityScale;
+
+  return {
+    x,
+    y,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed - randomInRange(30, 110),
+    gravity: randomInRange(240, 340),
+    drag: randomInRange(0.974, 0.988),
+    size: randomInRange(6, 14),
+    rotation: randomInRange(0, Math.PI * 2),
+    spin: randomInRange(-10, 10),
+    life: randomInRange(0.95, 1.45),
+    age: 0,
+    wobble: randomInRange(-10, 10),
+    wobbleSpeed: randomInRange(7, 14),
+    color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+    shape: Math.random() < 0.22 ? "circle" : "rect",
+  };
+}
+
+function drawFireworkParticle(particle) {
+  if (!confettiContext) {
+    return;
+  }
+
+  const lifeProgress = particle.age / particle.life;
+  const alpha = Math.max(0, 1 - lifeProgress);
+
+  confettiContext.save();
+  confettiContext.translate(
+    particle.x + Math.sin(particle.wobble) * 6,
+    particle.y + Math.cos(particle.wobble * 0.9) * 2,
+  );
+  confettiContext.rotate(particle.rotation);
+  confettiContext.globalAlpha = alpha;
+  confettiContext.fillStyle = particle.color;
+
+  if (particle.shape === "circle") {
+    confettiContext.beginPath();
+    confettiContext.arc(0, 0, particle.size * 0.46, 0, Math.PI * 2);
+    confettiContext.fill();
+  } else {
+    confettiContext.fillRect(
+      -particle.size * 0.45,
+      -particle.size * 0.72,
+      particle.size * 0.9,
+      particle.size * 1.44,
+    );
+  }
+
+  confettiContext.restore();
+}
+
+function stepConfettiAnimation(timestamp) {
+  if (!confettiContext || !confettiCanvas) {
+    confettiAnimationFrame = 0;
+    return;
+  }
+
+  const width = confettiCanvas.width / Math.min(window.devicePixelRatio || 1, 2);
+  const height = confettiCanvas.height / Math.min(window.devicePixelRatio || 1, 2);
+  const deltaSeconds = Math.min(
+    0.033,
+    Math.max(0.016, (timestamp - confettiLastFrameTime) / 1000 || 0.016),
+  );
+
+  confettiLastFrameTime = timestamp;
+  confettiContext.clearRect(0, 0, width, height);
+
+  confettiParticles = confettiParticles.filter((particle) => {
+    particle.age += deltaSeconds;
+
+    if (particle.age >= particle.life) {
+      return false;
+    }
+
+    particle.vx *= Math.pow(particle.drag, deltaSeconds * 60);
+    particle.vy = particle.vy * Math.pow(particle.drag, deltaSeconds * 60) + particle.gravity * deltaSeconds;
+    particle.x += particle.vx * deltaSeconds;
+    particle.y += particle.vy * deltaSeconds;
+    particle.rotation += particle.spin * deltaSeconds;
+    particle.wobble += particle.wobbleSpeed * deltaSeconds;
+
+    if (particle.y > height + 120 || particle.x < -120 || particle.x > width + 120) {
+      return false;
+    }
+
+    drawFireworkParticle(particle);
+    return true;
+  });
+
+  if (confettiParticles.length > 0) {
+    confettiAnimationFrame = window.requestAnimationFrame(stepConfettiAnimation);
+    return;
+  }
+
+  confettiAnimationFrame = 0;
+}
+
+function spawnFireworkCannon({
+  originXRange = [0.1, 0.3],
+  originYRange = [-0.18, 0.18],
+  particleCount = 32,
+  velocityScale = 1,
+} = {}) {
+  const context = ensureConfettiCanvas();
+
+  if (!context || !confettiCanvas) {
+    return;
+  }
+
+  const rect = confettiCanvas.getBoundingClientRect();
+  const originX = randomInRange(originXRange[0], originXRange[1]) * rect.width;
+  const originY = randomInRange(originYRange[0], originYRange[1]) * rect.height;
+
+  for (let index = 0; index < particleCount; index += 1) {
+    confettiParticles.push(createFireworkParticle(originX, originY, velocityScale));
+  }
+
+  if (!confettiAnimationFrame) {
+    confettiLastFrameTime = window.performance.now();
+    confettiAnimationFrame = window.requestAnimationFrame(stepConfettiAnimation);
+  }
+}
+
+function clearConfettiBurst() {
   window.clearTimeout(confettiCleanupTimer);
-  window.clearTimeout(confettiWaveTimer);
+  window.clearInterval(confettiWaveTimer);
+  window.cancelAnimationFrame(confettiAnimationFrame);
   confettiCleanupTimer = 0;
   confettiWaveTimer = 0;
-  confettiLayer.replaceChildren();
+  confettiAnimationFrame = 0;
+  confettiParticles = [];
+
+  if (!confettiContext || !confettiCanvas) {
+    return;
+  }
+
+  resizeConfettiCanvas();
+  confettiContext.clearRect(
+    0,
+    0,
+    confettiCanvas.width / Math.min(window.devicePixelRatio || 1, 2),
+    confettiCanvas.height / Math.min(window.devicePixelRatio || 1, 2),
+  );
 }
 
 function clearTicketReveal() {
@@ -845,6 +1120,11 @@ function clearSuccessPopup() {
   }
 }
 
+function clearSuccessCheerTimer() {
+  window.clearTimeout(successCheerTimer);
+  successCheerTimer = 0;
+}
+
 function clearReturnToSelection() {
   window.clearTimeout(returnToSelectionTimer);
   returnToSelectionTimer = 0;
@@ -852,8 +1132,10 @@ function clearReturnToSelection() {
 
 function clearRoundEffects() {
   clearConfettiBurst();
+  clearSuccessAudioPlayback();
   clearTicketReveal();
   clearSuccessPopup();
+  clearSuccessCheerTimer();
   clearReturnToSelection();
 }
 
@@ -881,62 +1163,68 @@ function showSuccessPopup(level) {
   pageShell.classList.add("is-success-popup-visible");
 }
 
-function launchConfettiBurst({ particleCount = 72, append = false } = {}) {
-  if (!confettiLayer) {
+function launchConfettiBurst({ duration = 5000 } = {}) {
+  clearConfettiBurst();
+
+  if (!ensureConfettiCanvas()) {
     return;
   }
 
-  if (!append) {
-    clearConfettiBurst();
-  }
+  const animationEnd = Date.now() + duration;
 
-  const fragment = document.createDocumentFragment();
+  const fireWave = () => {
+    const timeLeft = animationEnd - Date.now();
 
-  for (let index = 0; index < particleCount; index += 1) {
-    const piece = document.createElement("span");
-
-    piece.className = "confetti-piece";
-
-    if (index % 5 === 0) {
-      piece.classList.add("confetti-piece--dot");
+    if (timeLeft <= 0) {
+      window.clearInterval(confettiWaveTimer);
+      confettiWaveTimer = 0;
+      confettiCleanupTimer = window.setTimeout(clearConfettiBurst, 1500);
+      return;
     }
 
-    piece.style.setProperty("--start-x", `${(6 + Math.random() * 88).toFixed(2)}%`);
-    piece.style.setProperty("--start-y", `${(-18 - Math.random() * 20).toFixed(2)}%`);
-    piece.style.setProperty("--tx", `${(-180 + Math.random() * 360).toFixed(1)}px`);
-    piece.style.setProperty("--ty", `${(108 + Math.random() * 16).toFixed(2)}%`);
-    piece.style.setProperty("--rot", `${(-320 + Math.random() * 640).toFixed(1)}deg`);
-    piece.style.setProperty("--size", `${(10 + Math.random() * 12).toFixed(1)}px`);
-    piece.style.setProperty("--delay", `${Math.round(Math.random() * 240)}ms`);
-    piece.style.setProperty("--duration", `${Math.round(1500 + Math.random() * 700)}ms`);
-    piece.style.setProperty(
-      "--color",
-      confettiColors[Math.floor(Math.random() * confettiColors.length)],
-    );
+    const particleCount = Math.max(16, Math.round(50 * (timeLeft / duration)));
 
-    fragment.appendChild(piece);
-  }
+    spawnFireworkCannon({
+      originXRange: [0.08, 0.28],
+      originYRange: [-0.18, 0.22],
+      particleCount,
+      velocityScale: 1,
+    });
 
-  confettiLayer.appendChild(fragment);
-  window.clearTimeout(confettiCleanupTimer);
-  confettiCleanupTimer = window.setTimeout(clearConfettiBurst, 2900);
+    spawnFireworkCannon({
+      originXRange: [0.72, 0.92],
+      originYRange: [-0.18, 0.22],
+      particleCount,
+      velocityScale: 1,
+    });
+  };
+
+  fireWave();
+  confettiWaveTimer = window.setInterval(fireWave, 250);
 }
 
 function runSuccessSequence() {
   const level = getActiveLevel();
   if (!level) {
-    return;
+    return 4200;
   }
 
   clearTicketReveal();
   clearSuccessPopup();
+  clearSuccessAudioPlayback();
   isSuccessPopupOpen = true;
-  playSuccessCheer();
-  launchConfettiBurst();
-  confettiWaveTimer = window.setTimeout(() => {
-    launchConfettiBurst({ particleCount: 44, append: true });
-    confettiWaveTimer = 0;
-  }, 260);
+  const cueDurationMs = playSuccessCue();
+  const cheerDurationMs = getAudioDurationMs(
+    getSuccessCrowdAudio(),
+    successCheerAudioConfig.fallbackDurationMs,
+  );
+  const totalDurationMs = cueDurationMs + cheerDurationMs;
+  const successPopupDelayMs = Math.min(
+    320,
+    Math.max(180, Math.round(cueDurationMs * 0.08)),
+  );
+
+  launchConfettiBurst({ duration: totalDurationMs + 800 });
 
   ticketRevealTimer = window.setTimeout(() => {
     pageShell.classList.add("is-ticket-visible");
@@ -946,10 +1234,17 @@ function runSuccessSequence() {
   successPopupRevealTimer = window.setTimeout(() => {
     showSuccessPopup(level);
     successPopupRevealTimer = 0;
-  }, 760);
+  }, successPopupDelayMs);
+
+  successCheerTimer = window.setTimeout(() => {
+    playSuccessCheer();
+    successCheerTimer = 0;
+  }, cueDurationMs);
+
+  return totalDurationMs;
 }
 
-function scheduleReturnToSelection() {
+function scheduleReturnToSelection(delayMs = 4200) {
   clearReturnToSelection();
 
   returnToSelectionTimer = window.setTimeout(() => {
@@ -960,7 +1255,7 @@ function scheduleReturnToSelection() {
 
     completedLevelIds.add(completedLevel.id);
     showSelectionScreen(`${completedLevel.name} is complete! Choose another ride.`);
-  }, 4200);
+  }, delayMs);
 }
 
 function restartAnimation(element, className, duration = 320) {
@@ -1246,9 +1541,9 @@ function handleCheck() {
   if (gameState.isComplete) {
     isRoundResolved = true;
     isRetryMode = false;
-    runSuccessSequence();
+    const successSequenceDurationMs = runSuccessSequence();
     updateGame(`${level.name} complete! Returning to ride selection...`);
-    scheduleReturnToSelection();
+    scheduleReturnToSelection(successSequenceDurationMs + 180);
     return;
   }
 

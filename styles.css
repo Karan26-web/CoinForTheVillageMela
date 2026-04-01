@@ -332,6 +332,7 @@ body.is-portrait-locked .landscape-lock {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  display: block !important;
 }
 
 .ride-card__badge {

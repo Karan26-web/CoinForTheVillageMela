@@ -8,6 +8,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: "merry-go-round",
     name: "Merry-Go-Round",
+    selectionName: "Carousel",
     targetAmount: 10,
     overflowTolerance: 0,
     ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
@@ -18,6 +19,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: "rainbow-slide",
     name: "Rainbow-Slide",
+    selectionName: "Roller Ride",
     targetAmount: 13,
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
@@ -28,6 +30,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: "giant-wheel",
     name: "Giant-Wheel",
+    selectionName: "Ferris Wheel",
     targetAmount: 7,
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
@@ -38,6 +41,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: "bumper-car",
     name: "Bumper-Car",
+    selectionName: "Car Ride",
     targetAmount: 20,
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
@@ -60,6 +64,7 @@ const confettiColors = Object.freeze([
 const successCueAudioConfig = Object.freeze({
   path: "audios/Correct tap11.mp3",
   fallbackDurationMs: 5643,
+  cheerLeadInMs: 850,
   volume: 0.92,
 });
 
@@ -260,6 +265,10 @@ function formatDenomination(value) {
   return value >= 10 ? `₹${value}` : `₹${value} coin`;
 }
 
+function getSelectionCardTitle(level) {
+  return level?.selectionName || level?.name || "Carnival Ride";
+}
+
 function getOverflowAmount(level, total) {
   if (!level) {
     return 0;
@@ -288,19 +297,21 @@ function getSelectionScreenStatus() {
 function renderRideList() {
   const fragment = document.createDocumentFragment();
 
-  LEVELS.forEach((level) => {
+  LEVELS.forEach((level, index) => {
     const button = document.createElement("button");
     const isCompleted = completedLevelIds.has(level.id);
     const ruleLabel = getRuleBadgeText(level.ruleType);
+    const selectionTitle = getSelectionCardTitle(level);
 
     button.type = "button";
     button.className = "ride-card";
     button.dataset.levelId = level.id;
     button.disabled = isCompleted;
+    button.style.setProperty("--card-delay", `${index * 90}ms`);
     button.setAttribute("role", "listitem");
     button.setAttribute(
       "aria-label",
-      `${level.name}, target ${formatRupees(level.targetAmount)}, ${ruleLabel}`,
+      `${selectionTitle}, target ${formatRupees(level.targetAmount)}, ${ruleLabel}`,
     );
 
     if (isCompleted) {
@@ -308,16 +319,18 @@ function renderRideList() {
     }
 
     button.innerHTML = `
-      <span class="ride-card__media" aria-hidden="true">
-        <img
-          class="ride-card__image"
-          src="${level.cardImageSrc}"
-          alt=""
-          decoding="async"
-        />
+      <span class="ride-card__panel">
+        <span class="ride-card__media" aria-hidden="true">
+          <img
+            class="ride-card__image"
+            src="${level.cardImageSrc}"
+            alt=""
+            decoding="async"
+          />
+        </span>
+        ${isCompleted ? '<span class="ride-card__badge" aria-hidden="true">Done</span>' : ""}
       </span>
-      <span class="sr-only">${level.name} ${formatRupees(level.targetAmount)}</span>
-      ${isCompleted ? '<span class="ride-card__badge" aria-hidden="true">Done</span>' : ""}
+      <span class="sr-only">${selectionTitle} ${formatRupees(level.targetAmount)}</span>
     `;
 
     fragment.appendChild(button);
@@ -779,6 +792,15 @@ function getAudioDurationMs(audio, fallbackDurationMs) {
   return fallbackDurationMs;
 }
 
+function getSuccessCueToCheerDelayMs(audio = getSuccessCueAudio()) {
+  const cueDurationMs = getAudioDurationMs(
+    audio,
+    successCueAudioConfig.fallbackDurationMs,
+  );
+
+  return Math.max(0, cueDurationMs - successCueAudioConfig.cheerLeadInMs);
+}
+
 function resetManagedAudio(audio) {
   if (!audio) {
     return;
@@ -842,10 +864,7 @@ function playFallbackSuccessCheer() {
 
 function playSuccessCue() {
   const audio = getSuccessCueAudio();
-  const durationMs = getAudioDurationMs(
-    audio,
-    successCueAudioConfig.fallbackDurationMs,
-  );
+  const cueToCheerDelayMs = getSuccessCueToCheerDelayMs(audio);
   const fallbackChimeDurationMs = 320;
 
   if (!audio) {
@@ -854,31 +873,36 @@ function playSuccessCue() {
       playSuccessCheer();
       successCheerTimer = 0;
     }, fallbackChimeDurationMs);
-    return durationMs;
+    return fallbackChimeDurationMs;
   }
 
   resetManagedAudio(audio);
+  let cheerStarted = false;
 
   const finishCue = () => {
-    if (!audio.onended) {
+    if (cheerStarted) {
       return;
     }
 
+    cheerStarted = true;
     audio.onended = null;
     window.clearTimeout(successCheerTimer);
     successCheerTimer = 0;
+    audio.pause();
     playSuccessCheer();
   };
 
   audio.onended = finishCue;
-  successCheerTimer = window.setTimeout(finishCue, durationMs + 80);
+  successCheerTimer = window.setTimeout(finishCue, cueToCheerDelayMs);
 
   const playPromise = audio.play();
 
   if (playPromise && typeof playPromise.catch === "function") {
     playPromise.catch(() => {
+      cheerStarted = true;
       audio.onended = null;
       window.clearTimeout(successCheerTimer);
+      successCheerTimer = 0;
       playSuccessChime();
       successCheerTimer = window.setTimeout(() => {
         playSuccessCheer();
@@ -887,7 +911,7 @@ function playSuccessCue() {
     });
   }
 
-  return durationMs;
+  return cueToCheerDelayMs;
 }
 
 function playSuccessCheer() {

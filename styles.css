@@ -1,7 +1,12 @@
 :root {
   color-scheme: light;
+  --design-width: 1920;
+  --design-height: 1080;
   --stage-width: 1920px;
   --stage-height: 1080px;
+  --stage-shell-width: 1620px;
+  --selection-panel-width: 1320px;
+  --game-board-width: 1580px;
   --brown: #6c3412;
   --brown-deep: #4f210a;
   --brown-rich: #8c430d;
@@ -200,7 +205,7 @@ body.is-portrait-locked .landscape-lock {
 .game-shell {
   position: relative;
   z-index: 1;
-  width: min(1280px, 100%);
+  width: min(var(--stage-shell-width), 100%);
   height: 100%;
   margin: 0 auto;
 }
@@ -247,26 +252,30 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .page-shell.is-selection-view .game-shell {
-  width: min(1840px, 100%);
+  width: min(1620px, 100%);
   height: 100%;
 }
 
 .page-shell.is-selection-view .selection-screen {
-  margin-top: clamp(36px, 5vw, 84px);
+  margin-top: clamp(24px, 3.6vw, 54px);
 }
 
 .selection-panel {
-  width: min(100%, 1760px);
+  width: min(100%, var(--selection-panel-width));
   margin: 0 auto;
+  padding-inline: clamp(16px, 1.8vw, 26px);
+  overflow-x: clip;
 }
 
 .ride-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(18px, 1.8vw, 30px);
-  width: min(100%, 1760px);
+  grid-template-columns: repeat(4, minmax(0, 248px));
+  gap: clamp(28px, 3vw, 42px);
+  width: 100%;
   margin: 0 auto;
-  align-items: stretch;
+  align-items: start;
+  justify-items: stretch;
+  justify-content: center;
 }
 
 .ride-card {
@@ -276,33 +285,60 @@ body.is-portrait-locked .landscape-lock {
   min-height: 0;
   padding: 0;
   border: 0;
-  border-radius: 0;
+  border-radius: 18px;
   background: transparent;
   color: #78380f;
   cursor: pointer;
   isolation: isolate;
   overflow: visible;
+  appearance: none;
+  -webkit-appearance: none;
   box-shadow: none;
   transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    filter 180ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 320ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 180ms ease;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: ride-card-enter 700ms cubic-bezier(0.18, 0.9, 0.24, 1)
+    var(--card-delay, 0ms) forwards;
 }
 
 .ride-card::before {
   content: none;
 }
 
+.ride-card__panel,
+.ride-card__surface {
+  display: block;
+}
+
+.ride-card__panel {
+  position: relative;
+  z-index: 1;
+}
+
+.ride-card__panel::before {
+  content: none;
+}
+
 .ride-card:hover:not(:disabled) {
-  transform: translateY(-8px) scale(1.01);
-  box-shadow: none;
-  filter: brightness(1.03);
+  transform: translateY(-10px) scale(1.05);
+  filter: brightness(1.03) saturate(1.04);
+  box-shadow:
+    0 0 0 8px rgba(255, 239, 155, 0.32),
+    0 0 36px rgba(255, 209, 46, 0.82),
+    0 0 88px rgba(255, 219, 58, 0.68),
+    0 0 150px rgba(255, 226, 76, 0.52);
 }
 
 .ride-card:focus-visible {
-  outline: 4px solid rgba(255, 237, 179, 0.98);
-  outline-offset: 6px;
+  outline: none;
+  box-shadow:
+    0 0 0 8px rgba(255, 239, 155, 0.28),
+    0 0 28px rgba(255, 209, 46, 0.72),
+    0 0 64px rgba(255, 219, 58, 0.56);
 }
 
 .ride-card:disabled {
@@ -311,16 +347,16 @@ body.is-portrait-locked .landscape-lock {
 
 .ride-card.is-completed {
   filter: saturate(0.48) brightness(0.96);
-  opacity: 0.82;
 }
 
 .ride-card__media {
   position: relative;
   display: block;
-  aspect-ratio: 871 / 1069;
-  border-radius: 0;
+  padding: 0;
+  border-radius: 18px;
   overflow: visible;
-  background: transparent;
+  background: none;
+  box-shadow: none;
   z-index: 1;
 }
 
@@ -329,16 +365,34 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .ride-card__image {
+  display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
   object-fit: contain;
   display: block !important;
+  border-radius: 18px;
+  filter: drop-shadow(0 14px 26px rgba(126, 63, 19, 0.18));
+  transition:
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ride-card:hover:not(:disabled) .ride-card__image {
+  transform: translateY(-2px) scale(1.02);
+  filter:
+    drop-shadow(0 20px 34px rgba(126, 63, 19, 0.24))
+    drop-shadow(0 0 26px rgba(255, 214, 74, 0.28));
+}
+
+.ride-card:hover:not(:disabled) .ride-card__media {
+  transform: none;
+  box-shadow: none;
 }
 
 .ride-card__badge {
   position: absolute;
-  top: clamp(16px, 1.2vw, 20px);
-  right: clamp(16px, 1.2vw, 20px);
+  top: clamp(14px, 1.2vw, 18px);
+  right: clamp(14px, 1.2vw, 18px);
   z-index: 2;
   padding: 8px 14px;
   border-radius: 999px;
@@ -901,13 +955,84 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .page-shell.is-game-view {
+  --layout-stage-width: min(
+    100vw,
+    calc(100dvh * var(--design-width) / var(--design-height)),
+    calc(var(--design-width) * 1px)
+  );
+  --layout-stage-height: calc(
+    var(--layout-stage-width) * var(--design-height) / var(--design-width)
+  );
+  /* Reference layout from the target 1920x1080 composition */
+  --game-banner-width: calc(var(--layout-stage-width) * 1688 / var(--design-width));
+  --game-banner-height: calc(var(--game-banner-width) * 164 / 1688);
+  --game-content-width: calc(var(--layout-stage-width) * 1408 / var(--design-width));
+  --game-left-panel-width: calc(var(--layout-stage-width) * 914 / var(--design-width));
+  --game-machine-width: calc(var(--layout-stage-width) * 420 / var(--design-width));
+  --game-rail-width: max(44px, calc(var(--layout-stage-width) * 58 / var(--design-width)));
+  --game-section-gap: calc(var(--layout-stage-width) * 26 / var(--design-width));
+  --game-column-gap: calc(var(--layout-stage-width) * 74 / var(--design-width));
+  --game-top-gap: calc(var(--layout-stage-height) * 26 / var(--design-height));
+  --game-back-offset: calc(var(--layout-stage-height) * 30 / var(--design-height));
+  --game-stack-gap: calc(var(--layout-stage-height) * 22 / var(--design-height));
+  --game-check-gap: calc(var(--layout-stage-height) * 30 / var(--design-height));
+  --game-dropzone-height: calc(var(--game-left-panel-width) * 945 / 2470);
+  --game-tray-height: calc(var(--game-left-panel-width) * 442 / 2488);
+  --game-controls-max: var(--game-left-panel-width);
+  --game-drop-inset-block-start: max(
+    22px,
+    calc(var(--layout-stage-height) * 30 / var(--design-height))
+  );
+  --game-drop-inset-inline: max(
+    24px,
+    calc(var(--layout-stage-width) * 34 / var(--design-width))
+  );
+  --game-drop-inset-block-end: max(
+    24px,
+    calc(var(--layout-stage-height) * 34 / var(--design-height))
+  );
+  --game-drop-gap: max(10px, calc(var(--layout-stage-width) * 14 / var(--design-width)));
+  --game-undo-size: max(44px, calc(var(--layout-stage-width) * 54 / var(--design-width)));
+  --game-undo-edge: max(16px, calc(var(--layout-stage-width) * 26 / var(--design-width)));
+  --game-tray-padding-inline: max(
+    18px,
+    calc(var(--layout-stage-width) * 28 / var(--design-width))
+  );
+  --game-tray-padding-block: max(
+    14px,
+    calc(var(--layout-stage-height) * 16 / var(--design-height))
+  );
+  --game-money-gap: max(8px, calc(var(--layout-stage-width) * 12 / var(--design-width)));
+  --game-coin-size: max(58px, calc(var(--layout-stage-width) * 74 / var(--design-width)));
+  --game-ten-size: max(66px, calc(var(--layout-stage-width) * 88 / var(--design-width)));
+  --game-note-size: max(136px, calc(var(--layout-stage-width) * 164 / var(--design-width)));
+  --game-note-wide-size: max(
+    148px,
+    calc(var(--layout-stage-width) * 178 / var(--design-width))
+  );
+  --game-check-width: max(
+    260px,
+    calc(var(--layout-stage-width) * 336 / var(--design-width))
+  );
   min-height: 0;
   height: 100%;
   overflow-y: auto;
-  padding-top: calc(20px + env(safe-area-inset-top));
-  padding-right: calc(36px + env(safe-area-inset-right));
-  padding-bottom: calc(26px + env(safe-area-inset-bottom));
-  padding-left: calc(36px + env(safe-area-inset-left));
+  padding-top: max(
+    calc(var(--layout-stage-height) * 18 / var(--design-height)),
+    calc(12px + env(safe-area-inset-top))
+  );
+  padding-right: max(
+    calc(var(--layout-stage-width) * 24 / var(--design-width)),
+    calc(12px + env(safe-area-inset-right))
+  );
+  padding-bottom: max(
+    calc(var(--layout-stage-height) * 24 / var(--design-height)),
+    calc(16px + env(safe-area-inset-bottom))
+  );
+  padding-left: max(
+    calc(var(--layout-stage-width) * 24 / var(--design-width)),
+    calc(12px + env(safe-area-inset-left))
+  );
 }
 
 .page-shell.is-game-view .page-background {
@@ -924,84 +1049,115 @@ body.is-portrait-locked .landscape-lock {
 
 .page-shell.is-game-view .top-banner {
   display: block;
-  width: min(100%, 1360px);
+  width: min(100%, var(--game-banner-width));
   margin: 0 auto;
 }
 
 .page-shell.is-game-view .top-banner__copy {
-  padding: 0 clamp(24px, 2.4vw, 40px) 0 clamp(124px, 10.2vw, 176px);
+  min-width: 0;
+  padding:
+    0
+    max(28px, calc(var(--layout-stage-width) * 36 / var(--design-width)))
+    0
+    max(132px, calc(var(--layout-stage-width) * 176 / var(--design-width)));
 }
 
 .page-shell.is-game-view .top-banner h1 {
-  font-size: clamp(0.98rem, 1.86vw, 2rem);
+  font-size: clamp(
+    0.82rem,
+    calc(var(--layout-stage-width) * 26 / var(--design-width)),
+    1.46rem
+  );
   font-weight: 900;
-  line-height: 1.08;
+  line-height: 1.04;
   color: #78380f;
   text-shadow: 0 1px 0 rgba(255, 252, 244, 0.52);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .page-shell.is-game-view .game-shell {
-  width: min(1820px, 100%);
+  width: min(var(--stage-shell-width), 100%);
   min-height: 100%;
   height: auto;
 }
 
 .page-shell.is-game-view .game-screen {
-  margin-top: clamp(4px, 0.6vw, 10px);
-  position: relative;
-  top: 0;
+  width: min(100%, var(--game-banner-width));
+  margin-top: var(--game-top-gap);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: var(--game-rail-width) minmax(0, var(--game-content-width));
+  grid-template-areas:
+    "back board"
+    ". check";
+  column-gap: var(--game-section-gap);
+  row-gap: var(--game-check-gap);
+  align-items: start;
+  justify-content: start;
   padding-top: 0;
-  padding-bottom: clamp(12px, 2vw, 24px);
+  padding-bottom: var(--game-stack-gap);
 }
 
 .page-shell.is-game-view .level-actions {
-  position: absolute;
-  top: clamp(-24px, -1.4vw, -12px);
-  left: 0;
+  grid-area: back;
+  position: static;
   z-index: 4;
+  align-self: start;
+  justify-self: center;
   justify-content: flex-start;
   gap: 0;
-  margin: 0;
+  margin: var(--game-back-offset) 0 0;
 }
 
 .page-shell.is-game-view .action-button {
-  min-height: 54px;
-  padding: 0 24px;
+  min-height: max(46px, calc(var(--layout-stage-height) * 46 / var(--design-height)));
+  padding: 0 max(16px, calc(var(--layout-stage-width) * 20 / var(--design-width)));
   border-radius: 999px;
-  font-size: 1.05rem;
-  box-shadow: 0 12px 18px rgba(108, 56, 20, 0.16);
+  font-size: clamp(
+    0.92rem,
+    calc(var(--layout-stage-width) * 18 / var(--design-width)),
+    1rem
+  );
+  box-shadow: 0 10px 16px rgba(108, 56, 20, 0.14);
 }
 
 .page-shell.is-game-view .action-button--back {
-  width: clamp(48px, 4vw, 58px);
+  width: var(--game-rail-width);
   min-width: 0;
-  min-height: clamp(48px, 4vw, 58px);
+  min-height: var(--game-rail-width);
   padding: 0;
   display: grid;
   place-items: center;
   border-radius: 999px;
   color: #8f470c;
-  background: rgba(255, 247, 232, 0.78);
+  background: rgba(255, 247, 232, 0.82);
   box-shadow:
-    0 10px 22px rgba(111, 57, 18, 0.14),
+    0 8px 18px rgba(111, 57, 18, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(4px);
 }
 
 .page-shell.is-game-view .action-button--back .action-button__arrow {
-  font-size: clamp(1.9rem, 2.8vw, 2.35rem);
+  font-size: clamp(1.7rem, 2.4vw, 2.05rem);
   transform: translateX(-1px);
 }
 
 .page-shell.is-game-view .board-layout {
+  grid-area: board;
   margin-top: 0;
-  width: min(100%, 1480px);
-  margin-inline: auto;
-  min-height: calc(100dvh - clamp(320px, 24vw, 400px));
-  grid-template-columns: minmax(560px, 1.45fr) minmax(300px, 0.8fr);
+  width: min(100%, var(--game-content-width));
+  margin-inline: 0;
+  min-height: 0;
+  grid-template-columns:
+    minmax(0, var(--game-left-panel-width))
+    minmax(0, var(--game-machine-width));
   grid-template-areas: "controls machine";
-  gap: clamp(18px, 2vw, 32px);
-  justify-content: center;
+  gap: var(--game-column-gap);
+  justify-content: start;
   align-items: center;
   transform: none;
 }
@@ -1010,13 +1166,14 @@ body.is-portrait-locked .landscape-lock {
   grid-area: machine;
   justify-content: center;
   align-self: center;
+  justify-self: center;
   margin-top: 0;
 }
 
 .page-shell.is-game-view .machine-wrap {
-  width: min(100%, 500px);
+  width: min(100%, var(--game-machine-width));
   margin-left: 0;
-  filter: drop-shadow(0 26px 30px rgba(121, 63, 24, 0.16));
+  filter: drop-shadow(0 20px 24px rgba(121, 63, 24, 0.14));
   transform-origin: 50% 100%;
 }
 
@@ -1030,7 +1187,11 @@ body.is-portrait-locked .landscape-lock {
   left: 50%;
   width: 46%;
   transform: translateX(-50%);
-  font-size: clamp(3rem, 4vw, 4.45rem);
+  font-size: clamp(
+    2.3rem,
+    calc(var(--layout-stage-width) * 60 / var(--design-width)),
+    3.65rem
+  );
   font-weight: 900;
   letter-spacing: -0.03em;
   line-height: 0.92;
@@ -1167,49 +1328,48 @@ body.is-portrait-locked .landscape-lock {
   grid-area: controls;
   display: grid;
   grid-template-rows: auto auto;
-  gap: clamp(14px, 1.1vw, 20px);
+  gap: var(--game-stack-gap);
   margin-top: 0;
   align-items: start;
   align-self: center;
-  width: 100%;
-  max-width: 860px;
-  justify-self: stretch;
+  width: min(100%, var(--game-left-panel-width));
+  max-width: var(--game-left-panel-width);
+  justify-self: start;
   transform: none;
 }
 
 @media (max-aspect-ratio: 17 / 10) and (min-width: 961px) {
-  .page-shell.is-game-view .top-banner__copy {
-    padding: 0 clamp(20px, 2vw, 30px) 0 clamp(112px, 9vw, 148px);
-  }
-
-  .page-shell.is-game-view .top-banner h1 {
-    font-size: clamp(0.94rem, 1.55vw, 1.72rem);
+  .page-shell.is-game-view {
+    /* Shorter landscape screens keep the same ratios but tighten the canvas */
+    --game-banner-width: calc(var(--layout-stage-width) * 1620 / var(--design-width));
+    --game-content-width: calc(var(--layout-stage-width) * 1350 / var(--design-width));
+    --game-left-panel-width: calc(var(--layout-stage-width) * 876 / var(--design-width));
+    --game-machine-width: calc(var(--layout-stage-width) * 400 / var(--design-width));
+    --game-column-gap: calc(var(--layout-stage-width) * 74 / var(--design-width));
+    --game-controls-max: var(--game-left-panel-width);
+    --game-dropzone-height: calc(var(--game-left-panel-width) * 945 / 2470);
+    --game-tray-height: calc(var(--game-left-panel-width) * 442 / 2488);
+    --game-top-gap: calc(var(--layout-stage-height) * 18 / var(--design-height));
+    --game-stack-gap: calc(var(--layout-stage-height) * 14 / var(--design-height));
+    --game-check-gap: calc(var(--layout-stage-height) * 16 / var(--design-height));
   }
 
   .page-shell.is-game-view .board-layout {
-    min-height: clamp(520px, 42vw, 720px);
-    gap: clamp(14px, 1.5vw, 24px);
-    align-items: center;
+    min-height: 0;
+    align-items: start;
     transform: none;
   }
 
   .page-shell.is-game-view .machine-column {
-    align-self: center;
+    align-self: start;
   }
 
   .page-shell.is-game-view .machine-wrap {
-    width: min(100%, 420px);
+    width: min(100%, var(--game-machine-width));
   }
 
-  .page-shell.is-game-view .controls-column {
-    width: 100%;
-    max-width: 820px;
-    align-self: center;
-    transform: none;
-  }
-
-  .page-shell.is-game-view .controls-panel {
-    max-width: 820px;
+  .page-shell.is-game-view .check-button {
+    width: min(100%, var(--game-check-width));
   }
 }
 
@@ -1222,7 +1382,7 @@ body.is-portrait-locked .landscape-lock {
   left: auto;
   bottom: auto;
   width: 100%;
-  min-height: 0;
+  min-height: var(--game-dropzone-height);
   aspect-ratio: 2470 / 945;
   padding: 0;
   display: block;
@@ -1255,30 +1415,38 @@ body.is-portrait-locked .landscape-lock {
 
 .page-shell.is-game-view .placed-money-layer {
   position: absolute;
-  inset: clamp(34px, 2.4vw, 44px) clamp(42px, 3vw, 54px)
-    clamp(40px, 2.8vw, 54px);
+  inset: var(--game-drop-inset-block-start) var(--game-drop-inset-inline)
+    var(--game-drop-inset-block-end);
   z-index: 1;
   min-height: 0;
   padding: 0;
   justify-content: flex-start;
   align-content: flex-start;
-  gap: clamp(12px, 1.2vw, 18px);
+  gap: var(--game-drop-gap);
 }
 
 .page-shell.is-game-view .placed-money__sprite--coin {
-  width: clamp(62px, 6vw, 92px);
+  width: clamp(
+    52px,
+    calc(var(--layout-stage-width) * 64 / var(--design-width)),
+    72px
+  );
 }
 
 .page-shell.is-game-view .placed-money__sprite--note {
-  width: clamp(138px, 13.5vw, 214px);
+  width: clamp(
+    116px,
+    calc(var(--layout-stage-width) * 146 / var(--design-width)),
+    164px
+  );
 }
 
 .undo-button {
   position: absolute;
-  right: clamp(34px, 2.4vw, 46px);
-  bottom: clamp(28px, 2vw, 40px);
-  width: clamp(56px, 4.5vw, 70px);
-  height: clamp(56px, 4.5vw, 70px);
+  right: var(--game-undo-edge);
+  bottom: var(--game-undo-edge);
+  width: var(--game-undo-size);
+  height: var(--game-undo-size);
   border: 0;
   padding: 0;
   border-radius: 0;
@@ -1312,11 +1480,11 @@ body.is-portrait-locked .landscape-lock {
 
 .page-shell.is-game-view .controls-panel {
   width: 100%;
-  max-width: 860px;
-  min-height: 0;
+  max-width: var(--game-left-panel-width);
+  min-height: var(--game-tray-height);
   aspect-ratio: 2488 / 442;
-  padding: clamp(18px, 1.5vw, 24px) clamp(34px, 2.8vw, 56px)
-    clamp(22px, 1.8vw, 28px);
+  padding: var(--game-tray-padding-block) var(--game-tray-padding-inline)
+    calc(var(--game-tray-padding-block) + 4px);
   border: 0;
   border-radius: 0;
   background: url("assets/moneyContainer.png") center center / 100% 100% no-repeat;
@@ -1329,12 +1497,12 @@ body.is-portrait-locked .landscape-lock {
   min-height: 0;
   display: grid;
   grid-template-columns:
-    repeat(4, minmax(0, 0.85fr))
-    minmax(0, 1.42fr)
-    minmax(0, 1.62fr);
+    repeat(4, minmax(0, 0.72fr))
+    minmax(0, 1.16fr)
+    minmax(0, 1.32fr);
   align-items: center;
   justify-items: center;
-  gap: clamp(10px, 1vw, 18px);
+  gap: var(--game-money-gap);
 }
 
 .page-shell.is-game-view .money-button {
@@ -1343,22 +1511,23 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .page-shell.is-game-view .money-button--coin {
-  max-width: clamp(78px, 6vw, 98px);
+  max-width: var(--game-coin-size);
   aspect-ratio: 1;
 }
 
 .page-shell.is-game-view .money-button--ten {
-  max-width: clamp(90px, 6.8vw, 110px);
+  max-width: var(--game-ten-size);
 }
 
 .page-shell.is-game-view .money-button--note {
   grid-column: auto;
-  width: 100%;
-  max-width: none;
+  width: min(100%, var(--game-note-size));
+  max-width: var(--game-note-size);
 }
 
 .page-shell.is-game-view .money-button--note-wide {
-  width: 100%;
+  width: min(100%, var(--game-note-wide-size));
+  max-width: var(--game-note-wide-size);
 }
 
 .page-shell.is-game-view .money-sprite--coin,
@@ -1412,10 +1581,11 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .page-shell.is-game-view .check-button {
+  grid-area: check;
   display: block;
-  margin: clamp(10px, 1vw, 16px) auto 0;
-  margin-inline: auto;
-  width: min(100%, 410px);
+  justify-self: center;
+  margin: max(10px, calc(var(--layout-stage-height) * 14 / var(--design-height))) 0 0;
+  width: min(100%, var(--game-check-width));
 }
 
 .success-popup {
@@ -2280,9 +2450,18 @@ body.is-portrait-locked .landscape-lock {
     padding: 20px 20px 28px;
   }
 
+  .page-shell.is-selection-view .game-shell {
+    width: min(1240px, 100%);
+  }
+
   .ride-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: min(100%, 980px);
+    grid-template-columns: repeat(2, minmax(0, 248px));
+    gap: clamp(24px, 4vw, 34px);
+    width: 100%;
+  }
+
+  .selection-panel {
+    width: min(100%, 820px);
   }
 
   .board-layout {
@@ -2299,7 +2478,7 @@ body.is-portrait-locked .landscape-lock {
   }
 }
 
-@media (max-width: 960px), (max-height: 900px) {
+@media (max-width: 960px) {
   body {
     display: block;
     overflow-x: hidden;
@@ -2337,10 +2516,6 @@ body.is-portrait-locked .landscape-lock {
 
   .page-shell.is-selection-view .selection-screen {
     margin-top: clamp(18px, 4vw, 28px);
-  }
-
-  .ride-list {
-    width: 100%;
   }
 
   .page-shell.is-game-view {
@@ -2439,7 +2614,7 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .ride-list {
-    gap: 16px;
+    gap: 22px;
   }
 
   .ride-card {
@@ -2465,6 +2640,14 @@ body.is-portrait-locked .landscape-lock {
     padding: 16px 12px 24px;
   }
 
+  .page-shell.is-selection-view .selection-screen {
+    margin-top: clamp(16px, 6vw, 28px);
+  }
+
+  .selection-panel {
+    width: min(100%, 372px);
+  }
+
   .top-banner__copy {
     padding: 0 14px 0 72px;
   }
@@ -2477,10 +2660,12 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .ride-list {
-    gap: 14px;
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
   .ride-card {
+    width: 100%;
     min-height: 0;
   }
 
@@ -2536,8 +2721,17 @@ body.is-portrait-locked .landscape-lock {
 
 @media (max-width: 860px) {
   .page-shell.is-game-view {
-    padding-right: calc(24px + env(safe-area-inset-right));
-    padding-left: calc(24px + env(safe-area-inset-left));
+    --game-banner-width: 100%;
+    --game-content-width: 100%;
+    --game-left-panel-width: 100%;
+    --game-controls-max: 100%;
+    --game-machine-width: min(
+      100%,
+      max(300px, calc(var(--layout-stage-width) * 372 / var(--design-width)))
+    );
+    --game-column-gap: calc(var(--layout-stage-height) * 22 / var(--design-height));
+    --game-dropzone-height: auto;
+    --game-tray-height: auto;
   }
 
   .page-shell.is-game-view .board-layout {
@@ -2552,41 +2746,98 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .level-actions {
-    position: relative;
-    top: auto;
-    left: auto;
-    margin: 0 0 12px;
+    position: static;
+    margin: 0;
   }
 
   .page-shell.is-game-view .controls-column {
-    width: min(100%, 980px);
+    width: min(100%, var(--game-controls-max));
+    max-width: var(--game-controls-max);
     justify-self: stretch;
     transform: none;
   }
 
   .page-shell.is-game-view .machine-wrap {
-    width: min(100%, 450px);
-  }
-
-  .page-shell.is-game-view .money-tray {
-    grid-template-columns: repeat(4, minmax(72px, 0.9fr));
-    justify-content: center;
-    row-gap: 14px;
-  }
-
-  .page-shell.is-game-view .money-button--note {
-    grid-column: span 2;
-    max-width: 220px;
-  }
-
-  .page-shell.is-game-view .money-button--note-wide {
-    max-width: 250px;
+    width: min(100%, var(--game-machine-width));
   }
 }
 
 @media (max-width: 960px) {
+  .page-shell.is-game-view {
+    /* Tablet/mobile ratios stay tied to the same reference canvas */
+    --game-banner-width: 100%;
+    --game-content-width: 100%;
+    --game-left-panel-width: 100%;
+    --game-rail-width: 44px;
+    --game-section-gap: 0px;
+    --game-column-gap: calc(var(--layout-stage-width) * 20 / var(--design-width));
+    --game-controls-max: min(
+      100%,
+      max(320px, calc(var(--layout-stage-width) * 720 / var(--design-width)))
+    );
+    --game-machine-width: min(
+      100%,
+      max(300px, calc(var(--layout-stage-width) * 390 / var(--design-width)))
+    );
+    --game-dropzone-height: auto;
+    --game-tray-height: auto;
+    --game-top-gap: calc(var(--layout-stage-height) * 16 / var(--design-height));
+    --game-back-offset: 0px;
+    --game-stack-gap: calc(var(--layout-stage-height) * 14 / var(--design-height));
+    --game-check-gap: calc(var(--layout-stage-height) * 16 / var(--design-height));
+    --game-drop-inset-block-start: max(
+      18px,
+      calc(var(--layout-stage-height) * 24 / var(--design-height))
+    );
+    --game-drop-inset-inline: max(
+      18px,
+      calc(var(--layout-stage-width) * 28 / var(--design-width))
+    );
+    --game-drop-inset-block-end: max(
+      20px,
+      calc(var(--layout-stage-height) * 28 / var(--design-height))
+    );
+    --game-undo-edge: max(14px, calc(var(--layout-stage-width) * 18 / var(--design-width)));
+    --game-tray-padding-inline: max(
+      18px,
+      calc(var(--layout-stage-width) * 22 / var(--design-width))
+    );
+    --game-tray-padding-block: max(
+      14px,
+      calc(var(--layout-stage-height) * 14 / var(--design-height))
+    );
+    --game-money-gap: max(10px, calc(var(--layout-stage-width) * 12 / var(--design-width)));
+    --game-coin-size: max(64px, calc(var(--layout-stage-width) * 72 / var(--design-width)));
+    --game-ten-size: max(72px, calc(var(--layout-stage-width) * 82 / var(--design-width)));
+    --game-note-size: max(
+      146px,
+      calc(var(--layout-stage-width) * 150 / var(--design-width))
+    );
+    --game-note-wide-size: max(
+      158px,
+      calc(var(--layout-stage-width) * 164 / var(--design-width))
+    );
+    --game-check-width: min(
+      100%,
+      max(260px, calc(var(--layout-stage-width) * 320 / var(--design-width)))
+    );
+  }
+
   .page-shell.is-game-view .game-screen {
+    width: 100%;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "back"
+      "board"
+      "check";
+    column-gap: 0;
+    row-gap: 14px;
     padding-top: 0;
+  }
+
+  .page-shell.is-game-view .level-actions {
+    justify-self: start;
+    margin: 0 0 4px;
   }
 
   .page-shell.is-game-view .page-background {
@@ -2600,28 +2851,18 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .board-layout {
-    gap: 18px;
-  }
-
-  .page-shell.is-game-view .machine-wrap {
-    width: min(100%, 400px);
-  }
-
-  .page-shell.is-game-view .controls-column {
-    width: min(100%, 760px);
-    gap: 14px;
+    gap: var(--game-column-gap);
   }
 
   .page-shell.is-game-view .controls-panel {
     aspect-ratio: auto;
     min-height: 210px;
-    padding: 18px 20px 24px;
   }
 
   .page-shell.is-game-view .money-tray {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     justify-items: center;
-    gap: 16px 12px;
+    gap: var(--game-money-gap);
   }
 
   .page-shell.is-game-view .money-button {
@@ -2631,20 +2872,16 @@ body.is-portrait-locked .landscape-lock {
 
   .page-shell.is-game-view .money-button--coin,
   .page-shell.is-game-view .money-button--ten {
-    max-width: clamp(68px, 14vw, 84px);
+    max-width: 100%;
   }
 
   .page-shell.is-game-view .money-button--note {
     grid-column: auto;
-    max-width: min(100%, 156px);
+    max-width: var(--game-note-size);
   }
 
   .page-shell.is-game-view .money-button--note-wide {
-    max-width: min(100%, 168px);
-  }
-
-  .page-shell.is-game-view .check-button {
-    width: min(100%, 320px);
+    max-width: var(--game-note-wide-size);
   }
 }
 
@@ -2680,16 +2917,20 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .machine-wrap {
-    width: min(100%, 390px);
+    width: min(100%, var(--game-machine-width));
   }
 
   .page-shell.is-game-view .machine-goal {
-    font-size: clamp(2.25rem, 8vw, 3.2rem);
+    font-size: clamp(
+      2rem,
+      calc(var(--layout-stage-width) * 54 / var(--design-width)),
+      3.2rem
+    );
   }
 
   .page-shell.is-game-view .controls-column {
-    width: min(100%, 720px);
-    gap: 14px;
+    width: min(100%, var(--game-controls-max));
+    max-width: var(--game-controls-max);
   }
 
   .page-shell.is-game-view .machine-dropzone {
@@ -2703,29 +2944,23 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .placed-money-layer {
-    inset: clamp(18px, 4vw, 26px) clamp(20px, 5vw, 30px)
-      clamp(22px, 5vw, 34px);
+    inset: var(--game-drop-inset-block-start) var(--game-drop-inset-inline)
+      var(--game-drop-inset-block-end);
     justify-content: center;
-    gap: clamp(8px, 2vw, 12px);
+    gap: var(--game-drop-gap);
   }
 
   .undo-button {
-    right: clamp(14px, 4vw, 22px);
-    bottom: clamp(14px, 4vw, 22px);
-    width: clamp(46px, 8.8vw, 56px);
-    height: clamp(46px, 8.8vw, 56px);
-  }
-
-  .page-shell.is-game-view .controls-panel {
-    aspect-ratio: auto;
-    min-height: 0;
-    padding: 18px 20px 24px;
+    right: var(--game-undo-edge);
+    bottom: var(--game-undo-edge);
+    width: var(--game-undo-size);
+    height: var(--game-undo-size);
   }
 
   .page-shell.is-game-view .money-tray {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     justify-items: center;
-    gap: 16px 12px;
+    gap: var(--game-money-gap);
   }
 
   .page-shell.is-game-view .money-button {
@@ -2735,30 +2970,46 @@ body.is-portrait-locked .landscape-lock {
 
   .page-shell.is-game-view .money-button--coin,
   .page-shell.is-game-view .money-button--ten {
-    max-width: clamp(68px, 18vw, 88px);
+    max-width: 100%;
   }
 
   .page-shell.is-game-view .money-button--note {
     grid-column: auto;
-    max-width: min(100%, 168px);
+    max-width: var(--game-note-size);
   }
 
   .page-shell.is-game-view .money-button--note-wide {
-    max-width: min(100%, 176px);
-  }
-
-  .check-button {
-    width: min(100%, 340px);
-    font-size: clamp(1.6rem, 7vw, 2.2rem);
+    max-width: var(--game-note-wide-size);
   }
 }
 
 @media (max-width: 620px) {
   .page-shell.is-game-view {
-    padding-top: calc(12px + env(safe-area-inset-top));
-    padding-right: calc(12px + env(safe-area-inset-right));
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
-    padding-left: calc(12px + env(safe-area-inset-left));
+    --game-rail-width: 44px;
+    --game-machine-width: min(
+      100%,
+      max(252px, calc(var(--layout-stage-width) * 320 / var(--design-width)))
+    );
+    --game-drop-inset-block-start: max(
+      16px,
+      calc(var(--layout-stage-height) * 18 / var(--design-height))
+    );
+    --game-drop-inset-inline: max(
+      16px,
+      calc(var(--layout-stage-width) * 18 / var(--design-width))
+    );
+    --game-drop-inset-block-end: max(
+      18px,
+      calc(var(--layout-stage-height) * 20 / var(--design-height))
+    );
+    --game-coin-size: max(58px, calc(var(--layout-stage-width) * 64 / var(--design-width)));
+    --game-ten-size: max(62px, calc(var(--layout-stage-width) * 70 / var(--design-width)));
+    --game-note-size: max(172px, calc(var(--layout-stage-width) * 172 / var(--design-width)));
+    --game-note-wide-size: max(
+      180px,
+      calc(var(--layout-stage-width) * 180 / var(--design-width))
+    );
+    --game-check-width: min(100%, 260px);
   }
 
   .page-shell.is-game-view .game-screen {
@@ -2775,20 +3026,20 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .board-layout {
-    gap: 14px;
+    gap: var(--game-stack-gap);
   }
 
   .page-shell.is-game-view .machine-wrap {
-    width: min(100%, 320px);
+    width: min(100%, var(--game-machine-width));
   }
 
   .page-shell.is-game-view .machine-goal {
     width: 48%;
-    font-size: clamp(1.9rem, 10vw, 2.7rem);
-  }
-
-  .page-shell.is-game-view .controls-column {
-    gap: 12px;
+    font-size: clamp(
+      1.9rem,
+      calc(var(--layout-stage-width) * 52 / var(--design-width)),
+      2.7rem
+    );
   }
 
   .page-shell.is-game-view .machine-dropzone {
@@ -2796,50 +3047,40 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .placed-money-layer {
-    inset: 16px 18px 20px;
-    gap: 8px;
+    inset: var(--game-drop-inset-block-start) var(--game-drop-inset-inline)
+      var(--game-drop-inset-block-end);
+    gap: var(--game-drop-gap);
   }
 
   .page-shell.is-game-view .placed-money__sprite--coin {
-    width: clamp(40px, 11vw, 52px);
+    width: clamp(40px, calc(var(--layout-stage-width) * 42 / var(--design-width)), 52px);
   }
 
   .page-shell.is-game-view .placed-money__sprite--note {
-    width: clamp(84px, 22vw, 116px);
+    width: clamp(84px, calc(var(--layout-stage-width) * 108 / var(--design-width)), 116px);
   }
 
   .page-shell.is-game-view .controls-panel {
-    padding: 12px 10px 16px;
+    padding: var(--game-tray-padding-block) var(--game-tray-padding-inline)
+      calc(var(--game-tray-padding-block) + 2px);
     overflow: hidden;
   }
 
   .page-shell.is-game-view .money-tray {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px 8px;
-  }
-
-  .page-shell.is-game-view .money-button--coin {
-    max-width: clamp(58px, 20vw, 74px);
-  }
-
-  .page-shell.is-game-view .money-button--ten {
-    max-width: clamp(62px, 21vw, 78px);
+    gap: var(--game-money-gap);
   }
 
   .page-shell.is-game-view .money-button--note {
     grid-column: 1 / -1;
-    width: min(100%, 172px);
-    max-width: min(100%, 172px);
+    width: min(100%, var(--game-note-size));
+    max-width: var(--game-note-size);
     justify-self: center;
   }
 
   .page-shell.is-game-view .money-button--note-wide {
-    width: min(100%, 180px);
-    max-width: min(100%, 180px);
-  }
-
-  .page-shell.is-game-view .check-button {
-    width: min(100%, 260px);
+    width: min(100%, var(--game-note-wide-size));
+    max-width: var(--game-note-wide-size);
   }
 }
 
@@ -2849,12 +3090,13 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .ride-card {
+    width: 100%;
     min-height: 0;
   }
 
   .ride-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .ride-card__badge {
@@ -2869,16 +3111,24 @@ body.is-portrait-locked .landscape-lock {
     font-size: clamp(0.72rem, 3.6vw, 0.92rem);
   }
 
-  .page-shell.is-game-view .machine-wrap {
-    width: min(100%, 280px);
-  }
-
-  .page-shell.is-game-view .machine-goal {
-    font-size: clamp(1.72rem, 9vw, 2.35rem);
-  }
-
-  .page-shell.is-game-view .controls-column {
-    gap: 10px;
+  .page-shell.is-game-view {
+    --game-machine-width: min(
+      100%,
+      max(248px, calc(var(--layout-stage-width) * 280 / var(--design-width)))
+    );
+    --game-stack-gap: calc(var(--layout-stage-height) * 12 / var(--design-height));
+    --game-money-gap: max(8px, calc(var(--layout-stage-width) * 10 / var(--design-width)));
+    --game-coin-size: max(52px, calc(var(--layout-stage-width) * 58 / var(--design-width)));
+    --game-ten-size: max(56px, calc(var(--layout-stage-width) * 62 / var(--design-width)));
+    --game-note-size: max(154px, calc(var(--layout-stage-width) * 154 / var(--design-width)));
+    --game-note-wide-size: max(
+      160px,
+      calc(var(--layout-stage-width) * 160 / var(--design-width))
+    );
+    --game-tray-padding-inline: max(
+      8px,
+      calc(var(--layout-stage-width) * 12 / var(--design-width))
+    );
   }
 
   .page-shell.is-game-view .machine-dropzone {
@@ -2886,29 +3136,22 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .controls-panel {
-    padding: 12px 8px 16px;
+    padding: var(--game-tray-padding-block) var(--game-tray-padding-inline)
+      calc(var(--game-tray-padding-block) + 2px);
   }
 
   .page-shell.is-game-view .money-tray {
-    gap: 10px 6px;
-  }
-
-  .page-shell.is-game-view .money-button--coin {
-    max-width: clamp(52px, 19vw, 66px);
-  }
-
-  .page-shell.is-game-view .money-button--ten {
-    max-width: clamp(56px, 20vw, 70px);
+    gap: var(--game-money-gap);
   }
 
   .page-shell.is-game-view .money-button--note {
-    width: min(100%, 154px);
-    max-width: min(100%, 154px);
+    width: min(100%, var(--game-note-size));
+    max-width: var(--game-note-size);
   }
 
   .page-shell.is-game-view .money-button--note-wide {
-    width: min(100%, 160px);
-    max-width: min(100%, 160px);
+    width: min(100%, var(--game-note-wide-size));
+    max-width: var(--game-note-wide-size);
   }
 }
 
@@ -2922,6 +3165,7 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .ride-card {
+    width: 100%;
     min-height: 0;
   }
 
@@ -2933,17 +3177,15 @@ body.is-portrait-locked .landscape-lock {
     font-size: 0.68rem;
   }
 
-  .page-shell.is-game-view .machine-wrap {
-    width: min(100%, 252px);
-  }
-
-  .page-shell.is-game-view .machine-goal {
-    font-size: clamp(1.48rem, 9vw, 2rem);
-  }
-
-  .page-shell.is-game-view .money-button--note-wide {
-    width: min(100%, 148px);
-    max-width: min(100%, 148px);
+  .page-shell.is-game-view {
+    --game-machine-width: min(
+      100%,
+      max(228px, calc(var(--layout-stage-width) * 252 / var(--design-width)))
+    );
+    --game-note-wide-size: max(
+      148px,
+      calc(var(--layout-stage-width) * 148 / var(--design-width))
+    );
   }
 }
 
@@ -2983,11 +3225,12 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-selection-view .ride-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 220px));
+    gap: 12px;
   }
 
   .page-shell.is-selection-view .ride-card {
+    width: 100%;
     min-height: 0;
     align-self: start;
   }
@@ -3000,9 +3243,21 @@ body.is-portrait-locked .landscape-lock {
   }
 }
 
-@media (orientation: landscape) and (max-height: 520px) and (min-width: 760px) {
+@media (orientation: landscape) and (max-height: 520px) and (min-width: 1200px) {
   .page-shell.is-selection-view .ride-list {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@keyframes ride-card-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

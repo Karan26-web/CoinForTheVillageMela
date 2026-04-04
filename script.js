@@ -62,9 +62,8 @@ const confettiColors = Object.freeze([
 ]);
 
 const successCueAudioConfig = Object.freeze({
-  path: "audios/Correct tap11.mp3",
+  path: "audios/CorrectSound.mp3",
   fallbackDurationMs: 5643,
-  cheerLeadInMs: 850,
   volume: 0.92,
 });
 
@@ -793,12 +792,7 @@ function getAudioDurationMs(audio, fallbackDurationMs) {
 }
 
 function getSuccessCueToCheerDelayMs(audio = getSuccessCueAudio()) {
-  const cueDurationMs = getAudioDurationMs(
-    audio,
-    successCueAudioConfig.fallbackDurationMs,
-  );
-
-  return Math.max(0, cueDurationMs - successCueAudioConfig.cheerLeadInMs);
+  return getAudioDurationMs(audio, successCueAudioConfig.fallbackDurationMs);
 }
 
 function resetManagedAudio(audio) {

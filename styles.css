@@ -16,6 +16,9 @@
   --gold-deep: #f2a81b;
   --sky: #4db8f3;
   --sky-deep: #2497dc;
+  --sky-glow: rgba(91, 205, 255, 0.48);
+  --gold-glow: rgba(255, 222, 115, 0.5);
+  --pink-glow: rgba(255, 153, 203, 0.28);
   --mint: #5ec978;
   --mint-deep: #3ca85a;
   --shadow-brown: rgba(94, 43, 12, 0.18);
@@ -424,11 +427,17 @@ body.is-portrait-locked .landscape-lock {
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
-    opacity 180ms ease;
+    opacity 180ms ease,
+    filter 180ms ease;
 }
 
 .action-button:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.03);
+  filter: brightness(1.05);
+}
+
+.action-button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
 }
 
 .action-button:focus-visible {
@@ -448,18 +457,24 @@ body.is-portrait-locked .landscape-lock {
 
 .action-button--primary {
   background: linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 100%);
-  box-shadow: 0 16px 24px rgba(32, 123, 182, 0.22);
+  box-shadow:
+    0 16px 24px rgba(32, 123, 182, 0.22),
+    0 0 24px rgba(91, 205, 255, 0.18);
 }
 
 .action-button--secondary {
   background: linear-gradient(180deg, #ad5f1a 0%, #8f470c 100%);
-  box-shadow: 0 16px 24px rgba(118, 61, 18, 0.2);
+  box-shadow:
+    0 16px 24px rgba(118, 61, 18, 0.2),
+    0 0 20px rgba(255, 201, 119, 0.14);
 }
 
 .action-button--accent {
   color: var(--brown-deep);
   background: linear-gradient(180deg, #ffe07f 0%, #ffbe39 100%);
-  box-shadow: 0 16px 24px rgba(160, 107, 9, 0.22);
+  box-shadow:
+    0 16px 24px rgba(160, 107, 9, 0.22),
+    0 0 20px rgba(255, 224, 122, 0.2);
 }
 
 .board-layout {
@@ -531,6 +546,7 @@ body.is-portrait-locked .landscape-lock {
   white-space: nowrap;
   z-index: 2;
   pointer-events: none;
+  animation: goal-glow 1800ms ease-in-out infinite;
 }
 
 .machine-meter {
@@ -841,7 +857,8 @@ body.is-portrait-locked .landscape-lock {
   transition:
     transform 180ms ease,
     filter 180ms ease,
-    opacity 180ms ease;
+    opacity 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .money-button:not([disabled]) {
@@ -850,6 +867,7 @@ body.is-portrait-locked .landscape-lock {
 
 .money-button:hover:not(:disabled) {
   transform: translateY(-6px) scale(1.04);
+  filter: brightness(1.08);
 }
 
 .money-button:focus-visible {
@@ -887,6 +905,25 @@ body.is-portrait-locked .landscape-lock {
   user-select: none;
   pointer-events: none;
   filter: drop-shadow(0 12px 12px rgba(128, 69, 24, 0.16));
+  transition:
+    filter 180ms ease,
+    transform 180ms ease;
+}
+
+.money-button:hover:not(:disabled)::after {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow:
+    0 0 0 6px rgba(255, 239, 186, 0.18),
+    0 0 28px var(--gold-glow),
+    0 0 44px var(--pink-glow);
+}
+
+.money-button:hover:not(:disabled) .money-sprite {
+  transform: scale(1.02);
+  filter:
+    drop-shadow(0 14px 16px rgba(128, 69, 24, 0.2))
+    drop-shadow(0 0 18px rgba(255, 230, 128, 0.34));
 }
 
 .money-sprite--coin {
@@ -972,6 +1009,7 @@ body.is-portrait-locked .landscape-lock {
   --game-rail-width: max(44px, calc(var(--layout-stage-width) * 58 / var(--design-width)));
   --game-section-gap: calc(var(--layout-stage-width) * 26 / var(--design-width));
   --game-column-gap: calc(var(--layout-stage-width) * 74 / var(--design-width));
+  --game-layout-shift-x: 0px;
   --game-top-gap: calc(var(--layout-stage-height) * 26 / var(--design-height));
   --game-back-offset: calc(var(--layout-stage-height) * 30 / var(--design-height));
   --game-stack-gap: calc(var(--layout-stage-height) * 22 / var(--design-height));
@@ -1059,7 +1097,10 @@ body.is-portrait-locked .landscape-lock {
     0
     max(28px, calc(var(--layout-stage-width) * 36 / var(--design-width)))
     0
-    max(132px, calc(var(--layout-stage-width) * 176 / var(--design-width)));
+    calc(
+      max(148px, calc(var(--layout-stage-width) * 194 / var(--design-width))) +
+        var(--game-layout-shift-x)
+    );
 }
 
 .page-shell.is-game-view .top-banner h1 {
@@ -1086,31 +1127,31 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .page-shell.is-game-view .game-screen {
+  position: relative;
   width: min(100%, var(--game-banner-width));
   margin-top: var(--game-top-gap);
   margin-inline: auto;
   display: grid;
-  grid-template-columns: var(--game-rail-width) minmax(0, var(--game-content-width));
+  grid-template-columns: minmax(0, var(--game-content-width));
   grid-template-areas:
-    "back board"
-    ". check";
-  column-gap: var(--game-section-gap);
+    "board"
+    "check";
+  column-gap: 0;
   row-gap: var(--game-check-gap);
   align-items: start;
-  justify-content: start;
+  justify-content: center;
   padding-top: 0;
   padding-bottom: var(--game-stack-gap);
 }
 
 .page-shell.is-game-view .level-actions {
-  grid-area: back;
-  position: static;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: 4;
-  align-self: start;
-  justify-self: center;
   justify-content: flex-start;
   gap: 0;
-  margin: var(--game-back-offset) 0 0;
+  margin: 0;
 }
 
 .page-shell.is-game-view .action-button {
@@ -1150,7 +1191,7 @@ body.is-portrait-locked .landscape-lock {
   grid-area: board;
   margin-top: 0;
   width: min(100%, var(--game-content-width));
-  margin-inline: 0;
+  margin-inline: auto;
   min-height: 0;
   grid-template-columns:
     minmax(0, var(--game-left-panel-width))
@@ -1458,7 +1499,8 @@ body.is-portrait-locked .landscape-lock {
   cursor: pointer;
   transition:
     transform 180ms ease,
-    opacity 180ms ease;
+    opacity 180ms ease,
+    filter 180ms ease;
   z-index: 2;
 }
 
@@ -1470,7 +1512,10 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .undo-button:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.06) rotate(-8deg);
+  filter:
+    drop-shadow(0 0 16px rgba(129, 213, 255, 0.42))
+    drop-shadow(0 8px 12px rgba(61, 151, 204, 0.18));
 }
 
 .undo-button:disabled {
@@ -1573,7 +1618,9 @@ body.is-portrait-locked .landscape-lock {
   transition:
     transform 180ms ease,
     opacity 180ms ease,
-    filter 180ms ease;
+    filter 180ms ease,
+    box-shadow 180ms ease;
+  animation: button-breathe 2400ms ease-in-out infinite;
 }
 
 .check-button__label {
@@ -1584,7 +1631,7 @@ body.is-portrait-locked .landscape-lock {
   grid-area: check;
   display: block;
   justify-self: center;
-  margin: max(10px, calc(var(--layout-stage-height) * 14 / var(--design-height))) 0 0;
+  margin: max(22px, calc(var(--layout-stage-height) * 26 / var(--design-height))) 0 0;
   width: min(100%, var(--game-check-width));
 }
 
@@ -2191,24 +2238,31 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .check-button.is-retry {
-  border-radius: 999px;
-  background: linear-gradient(180deg, #f6993f 0%, #ef6b28 45%, #d94b18 100%);
-  box-shadow:
-    0 14px 22px rgba(154, 67, 20, 0.18),
-    inset 0 1px 0 rgba(255, 243, 223, 0.42);
-  color: #fff9f3;
-  text-shadow: 0 2px 8px rgba(110, 42, 11, 0.22);
+  width: min(100%, calc(var(--game-check-width) * 0.662));
+  aspect-ratio: 307 / 94;
+  border-radius: 0;
+  background: url("assets/TryAgainButton.png") center center / 100% 100% no-repeat;
+  box-shadow: none;
+  color: transparent;
+  text-shadow: none;
+  overflow: hidden;
 }
 
 .check-button.is-retry .check-button__label {
-  display: block;
-  font-size: clamp(1.55rem, 2.4vw, 2.3rem);
-  font-weight: 900;
-  line-height: 1;
+  display: none;
 }
 
 .check-button:hover:not(:disabled) {
-  transform: translateY(-2px);
+  animation: none;
+  transform: translateY(-4px) scale(1.03);
+  filter:
+    brightness(1.06)
+    drop-shadow(0 0 16px rgba(123, 218, 255, 0.42))
+    drop-shadow(0 10px 18px rgba(66, 151, 204, 0.2));
+}
+
+.check-button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
 }
 
 .check-button:disabled {
@@ -2226,6 +2280,65 @@ body.is-portrait-locked .landscape-lock {
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes banner-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(-2deg) scale(1.03);
+  }
+}
+
+@keyframes machine-idle-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes goal-glow {
+  0%,
+  100% {
+    filter: brightness(1);
+    text-shadow: 0 2px 10px rgba(255, 235, 175, 0.44);
+  }
+
+  50% {
+    filter: brightness(1.08);
+    text-shadow:
+      0 2px 10px rgba(255, 235, 175, 0.44),
+      0 0 18px rgba(255, 239, 171, 0.4);
+  }
+}
+
+@keyframes button-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-1px) scale(1.01);
   }
 }
 
@@ -2725,6 +2838,7 @@ body.is-portrait-locked .landscape-lock {
     --game-content-width: 100%;
     --game-left-panel-width: 100%;
     --game-controls-max: 100%;
+    --game-layout-shift-x: 0px;
     --game-machine-width: min(
       100%,
       max(300px, calc(var(--layout-stage-width) * 372 / var(--design-width)))
@@ -2768,6 +2882,7 @@ body.is-portrait-locked .landscape-lock {
     --game-banner-width: 100%;
     --game-content-width: 100%;
     --game-left-panel-width: 100%;
+    --game-layout-shift-x: 0px;
     --game-rail-width: 44px;
     --game-section-gap: 0px;
     --game-column-gap: calc(var(--layout-stage-width) * 20 / var(--design-width));

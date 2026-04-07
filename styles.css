@@ -1075,7 +1075,7 @@ html[lang="hi"] .top-banner h1 {
 }
 
 .machine-wrap.is-wrong-answer {
-  animation: machine-wrong-answer 440ms cubic-bezier(0.22, 0.8, 0.28, 1);
+  animation: machine-wrong-answer 560ms cubic-bezier(0.22, 0.8, 0.28, 1);
 }
 
 .money-button[disabled] {
@@ -1096,7 +1096,10 @@ html[lang="hi"] .top-banner h1 {
   --game-banner-height: calc(var(--game-banner-width) * 164 / 1688);
   --game-content-width: calc(var(--layout-stage-width) * 1408 / var(--design-width));
   --game-left-panel-width: calc(var(--layout-stage-width) * 914 / var(--design-width));
-  --game-machine-width: calc(var(--layout-stage-width) * 420 / var(--design-width));
+  --game-machine-width: calc(var(--layout-stage-width) * 472 / var(--design-width));
+  --game-machine-ground-offset: clamp(14px,
+      calc(var(--layout-stage-height) * 18 / var(--design-height)),
+      22px);
   --game-rail-width: max(44px, calc(var(--layout-stage-width) * 58 / var(--design-width)));
   --game-section-gap: calc(var(--layout-stage-width) * 26 / var(--design-width));
   --game-column-gap: calc(var(--layout-stage-width) * 74 / var(--design-width));
@@ -1108,19 +1111,29 @@ html[lang="hi"] .top-banner h1 {
   --game-dropzone-height: calc(var(--game-left-panel-width) * 945 / 2470);
   --game-tray-height: calc(var(--game-left-panel-width) * 442 / 2488);
   --game-controls-max: var(--game-left-panel-width);
-  --game-drop-inset-block-start: max(22px,
-      calc(var(--layout-stage-height) * 30 / var(--design-height)));
-  --game-drop-inset-inline: max(24px,
-      calc(var(--layout-stage-width) * 34 / var(--design-width)));
-  --game-drop-inset-block-end: max(24px,
-      calc(var(--layout-stage-height) * 34 / var(--design-height)));
-  --game-drop-gap: max(10px, calc(var(--layout-stage-width) * 14 / var(--design-width)));
+  --game-drop-inset-block-start: max(18px,
+      calc(var(--layout-stage-height) * 24 / var(--design-height)));
+  --game-drop-inset-inline: max(28px,
+      calc(var(--layout-stage-width) * 38 / var(--design-width)));
+  --game-drop-inset-block-end: max(18px,
+      calc(var(--layout-stage-height) * 24 / var(--design-height)));
+  --game-drop-gap: max(12px, calc(var(--layout-stage-width) * 16 / var(--design-width)));
   --game-undo-size: max(44px, calc(var(--layout-stage-width) * 54 / var(--design-width)));
   --game-undo-edge: max(16px, calc(var(--layout-stage-width) * 26 / var(--design-width)));
-  --game-drop-safe-inline-start: 18px;
-  --game-drop-safe-inline-end: calc(var(--game-undo-size) + var(--game-undo-edge) + 48px);
-  --game-drop-safe-block-start: 16px;
-  --game-drop-safe-block-end: calc(var(--game-undo-size) + 24px);
+  --game-drop-safe-inline-start: 10px;
+  --game-drop-safe-inline-end: 56px;
+  --game-drop-safe-block-start: 6px;
+  --game-drop-safe-block-end: 10px;
+  --game-drop-columns: 8;
+  --game-drop-slot-width: clamp(78px,
+      calc(var(--layout-stage-width) * 88 / var(--design-width)),
+      92px);
+  --game-drop-slot-height: clamp(52px,
+      calc(var(--layout-stage-height) * 60 / var(--design-height)),
+      60px);
+  --game-drop-row-gap: max(8px, calc(var(--layout-stage-height) * 10 / var(--design-height)));
+  --game-drop-column-gap: max(10px,
+      calc(var(--layout-stage-width) * 12 / var(--design-width)));
   --game-tray-padding-inline: max(18px,
       calc(var(--layout-stage-width) * 28 / var(--design-width)));
   --game-tray-padding-block: max(14px,
@@ -1281,13 +1294,13 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
   align-self: end;
   justify-self: center;
   margin-top: 0;
-  margin-bottom: clamp(-6px, calc(var(--layout-stage-height) * -10 / var(--design-height)), -2px);
+  margin-bottom: calc(-1 * var(--game-machine-ground-offset));
 }
 
 .page-shell.is-game-view .machine-wrap {
   width: min(100%, var(--game-machine-width));
   margin-left: 0;
-  filter: drop-shadow(0 20px 24px rgba(121, 63, 24, 0.14));
+  filter: drop-shadow(0 24px 26px rgba(121, 63, 24, 0.16));
   transform-origin: 50% 100%;
 }
 
@@ -1513,7 +1526,20 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
 }
 
 .page-shell.is-game-view .machine-dropzone__hint {
-  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(24px, 3vw, 42px);
+  pointer-events: none;
+  font-size: clamp(1rem, 1.8vw, 1.45rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: rgba(150, 98, 67, 0.58);
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255, 248, 232, 0.45);
 }
 
 .page-shell.is-game-view .machine-dropzone__hint[hidden],
@@ -1530,40 +1556,44 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
   right: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-end));
   bottom: calc(var(--game-drop-inset-block-end) + var(--game-drop-safe-block-end));
   z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--game-drop-columns), minmax(0, 1fr));
+  grid-auto-rows: var(--game-drop-slot-height);
+  grid-auto-flow: row dense;
   min-height: 0;
   padding: 0;
   overflow: hidden;
-  justify-content: flex-start;
+  justify-content: start;
   align-content: flex-start;
-  gap: var(--game-drop-gap);
+  justify-items: center;
+  align-items: center;
+  column-gap: var(--game-drop-column-gap);
+  row-gap: var(--game-drop-row-gap);
 }
 
 .page-shell.is-game-view .placed-money {
-  width: clamp(58px,
-      calc(var(--layout-stage-width) * 72 / var(--design-width)),
-      80px);
-  min-height: clamp(58px,
-      calc(var(--layout-stage-width) * 72 / var(--design-width)),
-      80px);
-  flex: 0 0 auto;
+  width: 100%;
+  min-height: var(--game-drop-slot-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .page-shell.is-game-view .placed-money--note {
-  width: clamp(126px,
-      calc(var(--layout-stage-width) * 156 / var(--design-width)),
-      174px);
+  width: 100%;
+  grid-column: span 2;
 }
 
 .page-shell.is-game-view .placed-money__sprite--coin {
-  width: clamp(52px,
-      calc(var(--layout-stage-width) * 64 / var(--design-width)),
-      72px);
+  width: min(100%, clamp(48px,
+      calc(var(--layout-stage-width) * 56 / var(--design-width)),
+      58px));
 }
 
 .page-shell.is-game-view .placed-money__sprite--note {
-  width: clamp(116px,
-      calc(var(--layout-stage-width) * 146 / var(--design-width)),
-      164px);
+  width: min(100%, clamp(158px,
+      calc(var(--layout-stage-width) * 176 / var(--design-width)),
+      182px));
 }
 
 .undo-button {
@@ -2547,24 +2577,32 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
     transform: translateX(0) rotate(0deg);
   }
 
-  16% {
-    transform: translateX(-10px) rotate(-1.5deg);
+  12% {
+    transform: translateX(-12px) rotate(-1.8deg);
   }
 
-  34% {
-    transform: translateX(9px) rotate(1.4deg);
+  24% {
+    transform: translateX(11px) rotate(1.7deg);
+  }
+
+  38% {
+    transform: translateX(-10px) rotate(-1.35deg);
   }
 
   52% {
-    transform: translateX(-7px) rotate(-1deg);
+    transform: translateX(8px) rotate(1.1deg);
   }
 
-  70% {
-    transform: translateX(5px) rotate(0.75deg);
+  66% {
+    transform: translateX(-6px) rotate(-0.85deg);
   }
 
-  86% {
-    transform: translateX(-2px) rotate(-0.35deg);
+  80% {
+    transform: translateX(4px) rotate(0.55deg);
+  }
+
+  92% {
+    transform: translateX(-2px) rotate(-0.25deg);
   }
 
   100% {
@@ -2790,11 +2828,14 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
   }
 
   .page-shell.is-game-view .machine-dropzone {
-    min-height: clamp(150px, 32vw, 220px);
+    min-height: clamp(220px, 32vw, 320px);
   }
 
   .page-shell.is-game-view .placed-money-layer {
-    inset: clamp(18px, 4vw, 28px) clamp(18px, 5vw, 30px) clamp(22px, 5vw, 34px);
+    top: calc(var(--game-drop-inset-block-start) + var(--game-drop-safe-block-start));
+    left: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-start));
+    right: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-end));
+    bottom: calc(var(--game-drop-inset-block-end) + var(--game-drop-safe-block-end));
   }
 
   .page-shell.is-game-view .controls-panel {
@@ -2941,8 +2982,11 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
     --game-left-panel-width: 100%;
     --game-controls-max: 100%;
     --game-layout-shift-x: 0px;
+    --game-machine-ground-offset: clamp(12px,
+        calc(var(--layout-stage-height) * 16 / var(--design-height)),
+        18px);
     --game-machine-width: min(100%,
-        max(300px, calc(var(--layout-stage-width) * 372 / var(--design-width))));
+        max(328px, calc(var(--layout-stage-width) * 418 / var(--design-width))));
     --game-column-gap: calc(var(--layout-stage-height) * 22 / var(--design-height));
     --game-dropzone-height: auto;
     --game-tray-height: auto;
@@ -2996,12 +3040,23 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
     --game-back-offset: 0px;
     --game-stack-gap: calc(var(--layout-stage-height) * 14 / var(--design-height));
     --game-check-gap: calc(var(--layout-stage-height) * 16 / var(--design-height));
-    --game-drop-inset-block-start: max(18px,
-        calc(var(--layout-stage-height) * 24 / var(--design-height)));
-    --game-drop-inset-inline: max(18px,
-        calc(var(--layout-stage-width) * 28 / var(--design-width)));
-    --game-drop-inset-block-end: max(20px,
-        calc(var(--layout-stage-height) * 28 / var(--design-height)));
+    --game-drop-inset-block-start: max(16px,
+        calc(var(--layout-stage-height) * 20 / var(--design-height)));
+    --game-drop-inset-inline: max(20px,
+        calc(var(--layout-stage-width) * 26 / var(--design-width)));
+    --game-drop-inset-block-end: max(16px,
+        calc(var(--layout-stage-height) * 20 / var(--design-height)));
+    --game-drop-columns: 8;
+    --game-drop-slot-width: clamp(72px,
+        calc(var(--layout-stage-width) * 78 / var(--design-width)),
+        84px);
+    --game-drop-slot-height: clamp(50px,
+        calc(var(--layout-stage-height) * 58 / var(--design-height)),
+        58px);
+    --game-drop-row-gap: max(8px,
+        calc(var(--layout-stage-height) * 10 / var(--design-height)));
+    --game-drop-column-gap: max(10px,
+        calc(var(--layout-stage-width) * 12 / var(--design-width)));
     --game-undo-edge: max(14px, calc(var(--layout-stage-width) * 18 / var(--design-width)));
     --game-tray-padding-inline: max(18px,
         calc(var(--layout-stage-width) * 22 / var(--design-width)));
@@ -3126,7 +3181,7 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
 
   .page-shell.is-game-view .machine-dropzone {
     aspect-ratio: 2470 / 945;
-    min-height: clamp(170px, 34vw, 220px);
+    min-height: clamp(220px, 34vw, 320px);
   }
 
   .page-shell.is-game-view .machine-dropzone__hint {
@@ -3139,9 +3194,8 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
     left: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-start));
     right: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-end));
     bottom: calc(var(--game-drop-inset-block-end) + var(--game-drop-safe-block-end));
-    justify-content: flex-start;
-    align-content: flex-start;
-    gap: var(--game-drop-gap);
+    column-gap: var(--game-drop-column-gap);
+    row-gap: var(--game-drop-row-gap);
   }
 
   .undo-button {
@@ -3180,14 +3234,28 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
 @media (max-width: 620px) {
   .page-shell.is-game-view {
     --game-rail-width: 44px;
+    --game-machine-ground-offset: clamp(8px,
+        calc(var(--layout-stage-height) * 10 / var(--design-height)),
+        14px);
     --game-machine-width: min(100%,
-        max(252px, calc(var(--layout-stage-width) * 320 / var(--design-width))));
-    --game-drop-inset-block-start: max(16px,
-        calc(var(--layout-stage-height) * 18 / var(--design-height)));
+        max(274px, calc(var(--layout-stage-width) * 344 / var(--design-width))));
+    --game-drop-inset-block-start: max(12px,
+        calc(var(--layout-stage-height) * 14 / var(--design-height)));
     --game-drop-inset-inline: max(16px,
         calc(var(--layout-stage-width) * 18 / var(--design-width)));
-    --game-drop-inset-block-end: max(18px,
-        calc(var(--layout-stage-height) * 20 / var(--design-height)));
+    --game-drop-inset-block-end: max(12px,
+        calc(var(--layout-stage-height) * 14 / var(--design-height)));
+    --game-drop-columns: 7;
+    --game-drop-slot-width: clamp(58px,
+        calc(var(--layout-stage-width) * 66 / var(--design-width)),
+        70px);
+    --game-drop-slot-height: clamp(44px,
+        calc(var(--layout-stage-height) * 52 / var(--design-height)),
+        52px);
+    --game-drop-row-gap: max(6px,
+        calc(var(--layout-stage-height) * 8 / var(--design-height)));
+    --game-drop-column-gap: max(8px,
+        calc(var(--layout-stage-width) * 10 / var(--design-width)));
     --game-coin-size: max(58px, calc(var(--layout-stage-width) * 64 / var(--design-width)));
     --game-ten-size: max(62px, calc(var(--layout-stage-width) * 70 / var(--design-width)));
     --game-note-size: max(172px, calc(var(--layout-stage-width) * 172 / var(--design-width)));
@@ -3225,7 +3293,7 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
   }
 
   .page-shell.is-game-view .machine-dropzone {
-    min-height: clamp(136px, 40vw, 180px);
+    min-height: clamp(200px, 42vw, 280px);
   }
 
   .page-shell.is-game-view .placed-money-layer {
@@ -3233,7 +3301,8 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
     left: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-start));
     right: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-end));
     bottom: calc(var(--game-drop-inset-block-end) + var(--game-drop-safe-block-end));
-    gap: var(--game-drop-gap);
+    column-gap: var(--game-drop-column-gap);
+    row-gap: var(--game-drop-row-gap);
   }
 
   .page-shell.is-game-view .placed-money__sprite--coin {
@@ -3314,7 +3383,7 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
 
   .page-shell.is-game-view {
     --game-machine-width: min(100%,
-        max(248px, calc(var(--layout-stage-width) * 280 / var(--design-width))));
+        max(262px, calc(var(--layout-stage-width) * 298 / var(--design-width))));
     --game-stack-gap: calc(var(--layout-stage-height) * 12 / var(--design-height));
     --game-money-gap: max(8px, calc(var(--layout-stage-width) * 10 / var(--design-width)));
     --game-coin-size: max(52px, calc(var(--layout-stage-width) * 58 / var(--design-width)));
@@ -3392,7 +3461,7 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
 
   .page-shell.is-game-view {
     --game-machine-width: min(100%,
-        max(228px, calc(var(--layout-stage-width) * 252 / var(--design-width))));
+        max(240px, calc(var(--layout-stage-width) * 268 / var(--design-width))));
     --game-note-wide-size: max(148px,
         calc(var(--layout-stage-width) * 148 / var(--design-width)));
   }

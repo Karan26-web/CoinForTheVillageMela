@@ -119,7 +119,7 @@ const instructionNarrationConfig = Object.freeze({
   }),
 });
 const placedMoneyMeasureTolerancePx = 2;
-const placedMoneyBoundaryPaddingPx = 14;
+const placedMoneyBoundaryPaddingPx = 36;
 const placedMoneyRowTolerancePx = 6;
 const placedMoneyMaxRows = 3;
 
@@ -691,6 +691,7 @@ function createMoneySelectionFromButton(button) {
   return {
     kind: definition.kind,
     value: definition.value,
+    isNote: definition.isNote,
   };
 }
 
@@ -747,6 +748,28 @@ function getOverflowAmount(level, total) {
 
 function getRuleBadgeText(ruleType) {
   return t("selection.ruleBadge");
+}
+
+function getLockedMoneyKind(level = getActiveLevel()) {
+  if (
+    !level ||
+    level.ruleType !== LEVEL_RULE_TYPES.SAME_DENOMINATION ||
+    placedMoney.length === 0
+  ) {
+    return null;
+  }
+
+  return placedMoney[0]?.kind ?? null;
+}
+
+function isSelectionAllowedForLevel(level, moneySelection) {
+  if (!level || !moneySelection) {
+    return false;
+  }
+
+  const lockedMoneyKind = getLockedMoneyKind(level);
+
+  return !lockedMoneyKind || moneySelection.kind === lockedMoneyKind;
 }
 
 function getSelectionScreenStatus() {
@@ -905,18 +928,25 @@ function refreshButtons() {
   const level = getActiveLevel();
   const isInteractionLocked =
     !level || isRoundResolved || isRetryMode || isDropZoneAtCapacity();
+  const lockedMoneyKind = getLockedMoneyKind(level);
 
   moneyButtons.forEach((button) => {
+    const selection = createMoneySelectionFromButton(button);
+    const isLockedToOtherDenomination =
+      Boolean(lockedMoneyKind) && selection?.kind !== lockedMoneyKind;
+    const isButtonDisabled =
+      !level || isInteractionLocked || isLockedToOtherDenomination;
+
     button.classList.remove(
       "is-selected",
       "is-locked",
       "is-overflow-blocked",
       "is-complete-locked",
     );
-    button.classList.toggle("is-inactive", Boolean(level) && isInteractionLocked);
+    button.classList.toggle("is-inactive", Boolean(level) && isButtonDisabled);
     button.setAttribute("aria-pressed", "false");
-    button.disabled = !level || isInteractionLocked;
-    button.draggable = Boolean(level) && !isInteractionLocked;
+    button.disabled = isButtonDisabled;
+    button.draggable = Boolean(level) && !isButtonDisabled;
   });
 }
 
@@ -985,18 +1015,19 @@ function refreshPhase() {
 
 function refreshDropZone() {
   const level = getActiveLevel();
+  const hasPlacedMoney = placedMoney.length > 0;
 
   if (!machineDropZone || !dropZoneHint) {
     return;
   }
 
-  machineDropZone.classList.toggle("has-money", placedMoney.length > 0);
+  machineDropZone.classList.toggle("has-money", hasPlacedMoney);
   machineDropZone.classList.toggle("is-full", isDropZoneAtCapacity());
-  dropZoneHint.hidden = true;
-  dropZoneHint.style.display = "none";
-  dropZoneHint.style.visibility = "hidden";
-  dropZoneHint.setAttribute("aria-hidden", "true");
-  dropZoneHint.textContent = "";
+  dropZoneHint.hidden = hasPlacedMoney;
+  dropZoneHint.style.display = hasPlacedMoney ? "none" : "";
+  dropZoneHint.style.visibility = hasPlacedMoney ? "hidden" : "visible";
+  dropZoneHint.setAttribute("aria-hidden", String(hasPlacedMoney));
+  dropZoneHint.textContent = t("machine.dropHintDefault");
 
   machineDropZone.setAttribute(
     "aria-disabled",
@@ -1043,55 +1074,52 @@ function renderPlacedMoney() {
   placedMoneyLayer.replaceChildren(createPlacedMoneyFragment(placedMoney));
 }
 
-function willPlacedMoneyOverflow(nextItems) {
-  if (!machineDropZone || !placedMoneyLayer || !document.body.contains(placedMoneyLayer)) {
-    return false;
+function getPlacedMoneySpan(item) {
+  const definition = getMoneyDefinition(item?.kind);
+
+  return definition?.isNote ? 2 : 1;
+}
+
+function getPlacedMoneyColumnCount() {
+  if (!placedMoneyLayer) {
+    return 8;
   }
 
-  const probe = placedMoneyLayer.cloneNode(false);
-  probe.removeAttribute("id");
-  probe.setAttribute("aria-hidden", "true");
-  probe.style.position = "absolute";
-  probe.style.visibility = "hidden";
-  probe.style.pointerEvents = "none";
-  probe.style.overflow = "hidden";
-  probe.style.boxSizing = "border-box";
-  probe.style.zIndex = "-1";
-  probe.appendChild(createPlacedMoneyFragment(nextItems));
-  machineDropZone.appendChild(probe);
+  const resolvedValue = Number.parseInt(
+    getComputedStyle(placedMoneyLayer).getPropertyValue("--game-drop-columns"),
+    10,
+  );
 
-  const probeRect = probe.getBoundingClientRect();
-  const probeChildren = [...probe.children];
-  const rowTops = [];
-  probeChildren.forEach((child) => {
-    const childRect = child.getBoundingClientRect();
-    const matchingRowIndex = rowTops.findIndex(
-      (rowTop) => Math.abs(rowTop - childRect.top) <= placedMoneyRowTolerancePx,
-    );
+  return Number.isFinite(resolvedValue) && resolvedValue > 0 ? resolvedValue : 8;
+}
 
-    if (matchingRowIndex === -1) {
-      rowTops.push(childRect.top);
+function getPlacedMoneyRowCount(nextItems) {
+  const columnCount = getPlacedMoneyColumnCount();
+  let rowCount = nextItems.length > 0 ? 1 : 0;
+  let usedSlotsInRow = 0;
+
+  for (const item of nextItems) {
+    const span = Math.min(getPlacedMoneySpan(item), columnCount);
+
+    if (usedSlotsInRow + span > columnCount) {
+      rowCount += 1;
+      usedSlotsInRow = 0;
     }
-  });
-  const isOverflowingByBounds = probeChildren.some((child) => {
-    const childRect = child.getBoundingClientRect();
 
-    return (
-      childRect.right > probeRect.right - placedMoneyBoundaryPaddingPx ||
-      childRect.bottom > probeRect.bottom - placedMoneyBoundaryPaddingPx
-    );
-  });
-  const isOverflowingByRows = rowTops.length > placedMoneyMaxRows;
-  const isOverflowingByScroll =
-    probe.scrollHeight > probe.clientHeight + placedMoneyMeasureTolerancePx ||
-    probe.scrollWidth > probe.clientWidth + placedMoneyMeasureTolerancePx;
+    usedSlotsInRow += span;
+  }
 
-  probe.remove();
-  return isOverflowingByBounds || isOverflowingByRows || isOverflowingByScroll;
+  return rowCount;
+}
+
+function willPlacedMoneyOverflow(nextItems) {
+  return getPlacedMoneyRowCount(nextItems) > placedMoneyMaxRows;
 }
 
 function canPlaceMoneySelection(moneySelection) {
-  if (!moneySelection) {
+  const level = getActiveLevel();
+
+  if (!level || !moneySelection || !isSelectionAllowedForLevel(level, moneySelection)) {
     return false;
   }
 
@@ -1193,14 +1221,63 @@ function playTone({ frequency, duration, type = "triangle", gainLevel = 0.07, sw
   oscillator.stop(now + duration);
 }
 
-function playTapSound(value) {
+function playCoinTouchSound(value) {
   playTone({
-    frequency: 260 + value * 38,
-    duration: 0.13,
+    frequency: 980 + value * 14,
+    duration: 0.045,
     type: "triangle",
-    gainLevel: 0.06,
-    sweepTo: 180 + value * 20,
+    gainLevel: 0.05,
+    sweepTo: 760 + value * 10,
   });
+
+  window.setTimeout(() => {
+    playTone({
+      frequency: 1420 + value * 12,
+      duration: 0.06,
+      type: "sine",
+      gainLevel: 0.03,
+      sweepTo: 1080 + value * 8,
+    });
+  }, 18);
+
+  window.setTimeout(() => {
+    playTone({
+      frequency: 620 + value * 10,
+      duration: 0.075,
+      type: "triangle",
+      gainLevel: 0.022,
+      sweepTo: 420 + value * 8,
+    });
+  }, 32);
+}
+
+function playNoteTouchSound(value) {
+  playTone({
+    frequency: 320 + value * 10,
+    duration: 0.08,
+    type: "triangle",
+    gainLevel: 0.032,
+    sweepTo: 240 + value * 8,
+  });
+
+  window.setTimeout(() => {
+    playTone({
+      frequency: 540 + value * 6,
+      duration: 0.055,
+      type: "sine",
+      gainLevel: 0.018,
+      sweepTo: 420 + value * 4,
+    });
+  }, 22);
+}
+
+function playTapSound(moneySelection) {
+  if (moneySelection?.isNote) {
+    playNoteTouchSound(moneySelection.value);
+    return;
+  }
+
+  playCoinTouchSound(moneySelection?.value ?? 0);
 }
 
 function playDeniedSound() {
@@ -1214,43 +1291,41 @@ function playDeniedSound() {
 }
 
 function playWrongAnswerBuzz() {
-  playTone({
-    frequency: 168,
-    duration: 0.11,
-    type: "sawtooth",
-    gainLevel: 0.08,
-    sweepTo: 118,
+  [0, 44, 88, 132, 176].forEach((delay, index) => {
+    window.setTimeout(() => {
+      playTone({
+        frequency: 196 - index * 12,
+        duration: 0.075,
+        type: "sawtooth",
+        gainLevel: 0.068,
+        sweepTo: 138 - index * 10,
+      });
+    }, delay);
   });
 
   window.setTimeout(() => {
     playTone({
-      frequency: 154,
-      duration: 0.11,
-      type: "sawtooth",
-      gainLevel: 0.082,
-      sweepTo: 104,
-    });
-  }, 58);
-
-  window.setTimeout(() => {
-    playTone({
-      frequency: 142,
-      duration: 0.13,
-      type: "sawtooth",
-      gainLevel: 0.085,
-      sweepTo: 94,
-    });
-  }, 116);
-
-  window.setTimeout(() => {
-    playTone({
-      frequency: 128,
-      duration: 0.16,
+      frequency: 122,
+      duration: 0.18,
       type: "triangle",
-      gainLevel: 0.062,
-      sweepTo: 82,
+      gainLevel: 0.05,
+      sweepTo: 84,
     });
-  }, 170);
+  }, 210);
+}
+
+function vibrateMachine(durationPattern = [80, 40, 80]) {
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+    return;
+  }
+
+  navigator.vibrate(durationPattern);
+}
+
+function triggerWrongAnswerFeedback() {
+  playWrongAnswerBuzz();
+  vibrateMachine([80, 30, 90, 30, 80]);
+  restartAnimation(machineWrap, "is-wrong-answer", 560);
 }
 
 function createManagedAudio({ path, volume }) {
@@ -1942,7 +2017,7 @@ function attemptMoneyPlacement(moneySelection, sourceButton) {
 
   placedMoney = [...placedMoney, moneySelection];
   gameState = move.nextState;
-  playTapSound(moneySelection.value);
+  playTapSound(moneySelection);
   updateGame();
 
   if (button) {
@@ -2023,6 +2098,7 @@ function getDragSelection(event) {
     return {
       kind: definition.kind,
       value: definition.value,
+      isNote: definition.isNote,
     };
   } catch {
     return null;
@@ -2170,8 +2246,7 @@ function handleCheck() {
   }
 
   isRetryMode = true;
-  playWrongAnswerBuzz();
-  restartAnimation(machineWrap, "is-wrong-answer", 440);
+  triggerWrongAnswerFeedback();
 
   if (gameState.total > level.targetAmount) {
     updateGame(

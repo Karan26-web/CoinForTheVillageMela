@@ -222,6 +222,70 @@ body.is-portrait-locked .landscape-lock {
   position: relative;
 }
 
+.language-toggle {
+  position: absolute;
+  top: clamp(-28px, -0.95vw, -14px);
+  right: clamp(14px, 1.8vw, 24px);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: clamp(136px, 12vw, 176px);
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 2px solid rgba(255, 244, 208, 0.88);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(121, 60, 18, 0.96), rgba(88, 39, 10, 0.96));
+  color: #fff9ee;
+  font-size: clamp(0.78rem, 1.02vw, 0.95rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow:
+    0 12px 18px rgba(102, 50, 16, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.language-toggle:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.language-toggle:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.language-toggle:focus-visible {
+  outline: 4px solid rgba(255, 238, 188, 0.82);
+  outline-offset: 3px;
+}
+
+.language-toggle__option {
+  opacity: 0.58;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    color 180ms ease,
+    text-shadow 180ms ease;
+}
+
+.language-toggle__option.is-active {
+  opacity: 1;
+  color: #fffdf7;
+  transform: scale(1.04);
+  text-shadow: 0 1px 8px rgba(255, 233, 170, 0.24);
+}
+
+.language-toggle__divider {
+  opacity: 0.45;
+}
+
 .top-banner__image {
   width: 100%;
   height: auto;
@@ -236,6 +300,11 @@ body.is-portrait-locked .landscape-lock {
   overflow: hidden;
 }
 
+html[lang="hi"] .top-banner__copy {
+  padding-left: clamp(112px, 13.9vw, 210px);
+  padding-right: clamp(124px, 12vw, 188px);
+}
+
 .top-banner h1 {
   margin: 0;
   width: 100%;
@@ -247,6 +316,14 @@ body.is-portrait-locked .landscape-lock {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+html[lang="hi"] .top-banner h1 {
+  font-size: clamp(0.92rem, 1.65vw, 1.72rem);
+  line-height: 1.12;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .selection-screen,
@@ -304,8 +381,7 @@ body.is-portrait-locked .landscape-lock {
     opacity 180ms ease;
   opacity: 0;
   transform: translateY(20px);
-  animation: ride-card-enter 700ms cubic-bezier(0.18, 0.9, 0.24, 1)
-    var(--card-delay, 0ms) forwards;
+  animation: ride-card-enter 700ms cubic-bezier(0.18, 0.9, 0.24, 1) var(--card-delay, 0ms) forwards;
 }
 
 .ride-card::before {
@@ -383,8 +459,7 @@ body.is-portrait-locked .landscape-lock {
 .ride-card:hover:not(:disabled) .ride-card__image {
   transform: translateY(-2px) scale(1.02);
   filter:
-    drop-shadow(0 20px 34px rgba(126, 63, 19, 0.24))
-    drop-shadow(0 0 26px rgba(255, 214, 74, 0.28));
+    drop-shadow(0 20px 34px rgba(126, 63, 19, 0.24)) drop-shadow(0 0 26px rgba(255, 214, 74, 0.28));
 }
 
 .ride-card:hover:not(:disabled) .ride-card__media {
@@ -397,15 +472,22 @@ body.is-portrait-locked .landscape-lock {
   top: clamp(14px, 1.2vw, 18px);
   right: clamp(14px, 1.2vw, 18px);
   z-index: 2;
-  padding: 8px 14px;
+  display: grid;
+  place-items: center;
+  width: clamp(28px, 2.3vw, 38px);
+  height: clamp(28px, 2.3vw, 38px);
+  padding: 0;
   border-radius: 999px;
-  background: rgba(119, 63, 19, 0.92);
-  color: #fff8eb;
-  font-size: 0.88rem;
+  background: linear-gradient(180deg, #4fd46d 0%, #1aa444 100%);
+  color: #f7fff8;
+  font-size: clamp(0.88rem, 1.15vw, 1.05rem);
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.03em;
-  box-shadow: 0 10px 18px rgba(96, 43, 12, 0.2);
+  letter-spacing: 0;
+  border: 2px solid rgba(240, 255, 241, 0.95);
+  box-shadow:
+    0 10px 18px rgba(32, 112, 46, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .level-actions {
@@ -568,15 +650,13 @@ body.is-portrait-locked .landscape-lock {
   inset: auto 0 0;
   height: 0%;
   border-radius: 16px 16px 9px 9px;
-  background: linear-gradient(
-    180deg,
-    #58cf21 0%,
-    #b8de00 22%,
-    #f0eb00 42%,
-    #ffd018 60%,
-    #ff9915 79%,
-    #ff1530 100%
-  );
+  background: linear-gradient(180deg,
+      #58cf21 0%,
+      #b8de00 22%,
+      #f0eb00 42%,
+      #ffd018 60%,
+      #ff9915 79%,
+      #ff1530 100%);
   box-shadow:
     0 0 10px rgba(255, 229, 95, 0.24),
     inset 0 0 10px rgba(255, 255, 255, 0.16);
@@ -590,12 +670,10 @@ body.is-portrait-locked .landscape-lock {
   inset: 0;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent 24%),
-    linear-gradient(
-      90deg,
+    linear-gradient(90deg,
       rgba(255, 255, 255, 0.06),
       transparent 44%,
-      rgba(255, 255, 255, 0.08)
-    );
+      rgba(255, 255, 255, 0.08));
   pointer-events: none;
 }
 
@@ -624,6 +702,11 @@ body.is-portrait-locked .landscape-lock {
     border-color 180ms ease,
     box-shadow 180ms ease,
     background 180ms ease;
+}
+
+/* Clip any placed money that would extend outside the visual dropzone. */
+.machine-dropzone {
+  overflow: hidden;
 }
 
 .machine-dropzone.is-ready,
@@ -656,9 +739,11 @@ body.is-portrait-locked .landscape-lock {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
+.machine-dropzone__hint[hidden],
 .machine-dropzone.has-money .machine-dropzone__hint {
-  font-size: clamp(0.64rem, 0.86vw, 0.82rem);
-  opacity: 0.82;
+  display: none !important;
+  opacity: 0;
+  visibility: hidden;
 }
 
 .placed-money-layer {
@@ -668,12 +753,20 @@ body.is-portrait-locked .landscape-lock {
   justify-content: center;
   align-content: flex-end;
   gap: 6px 8px;
+  width: 100%;
 }
 
 .placed-money {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
+  width: clamp(38px, 4.8vw, 52px);
+  min-height: clamp(38px, 4.8vw, 52px);
+}
+
+.placed-money--note {
+  width: clamp(84px, 11vw, 124px);
 }
 
 .placed-money__sprite {
@@ -760,8 +853,7 @@ body.is-portrait-locked .landscape-lock {
   opacity: 0;
   transform: translate(-50%, -10%) scale(0.62) rotate(0deg);
   box-shadow: 0 2px 4px rgba(97, 48, 16, 0.12);
-  animation: confetti-burst var(--duration) cubic-bezier(0.2, 0.85, 0.3, 1)
-    var(--delay) forwards;
+  animation: confetti-burst var(--duration) cubic-bezier(0.2, 0.85, 0.3, 1) var(--delay) forwards;
   will-change: transform, opacity;
 }
 
@@ -779,8 +871,7 @@ body.is-portrait-locked .landscape-lock {
 
 .page-shell.is-complete .machine-meter {
   filter:
-    drop-shadow(0 0 12px rgba(255, 241, 119, 0.92))
-    drop-shadow(0 0 24px rgba(255, 220, 74, 0.54));
+    drop-shadow(0 0 12px rgba(255, 241, 119, 0.92)) drop-shadow(0 0 24px rgba(255, 220, 74, 0.54));
   animation: meter-victory-pulse 560ms ease-out 2;
 }
 
@@ -794,12 +885,10 @@ body.is-portrait-locked .landscape-lock {
 .page-shell.is-complete .machine-meter__shine {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.36), transparent 26%),
-    linear-gradient(
-      90deg,
+    linear-gradient(90deg,
       rgba(255, 255, 255, 0.12),
       transparent 44%,
-      rgba(255, 252, 216, 0.22)
-    );
+      rgba(255, 252, 216, 0.22));
 }
 
 .page-shell.is-ticket-visible .ticket-prize {
@@ -922,8 +1011,7 @@ body.is-portrait-locked .landscape-lock {
 .money-button:hover:not(:disabled) .money-sprite {
   transform: scale(1.02);
   filter:
-    drop-shadow(0 14px 16px rgba(128, 69, 24, 0.2))
-    drop-shadow(0 0 18px rgba(255, 230, 128, 0.34));
+    drop-shadow(0 14px 16px rgba(128, 69, 24, 0.2)) drop-shadow(0 0 18px rgba(255, 230, 128, 0.34));
 }
 
 .money-sprite--coin {
@@ -966,8 +1054,11 @@ body.is-portrait-locked .landscape-lock {
 .money-button.is-inactive,
 .money-button.is-inactive:hover {
   transform: none;
-  filter: saturate(0.75) brightness(0.92);
-  opacity: 0.6;
+  /* Make inactive buttons visually distinct: desaturate, dim and reduce prominence */
+  filter: grayscale(0.9) brightness(0.82) saturate(0.6);
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .money-button.is-inactive::after {
@@ -988,18 +1079,18 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .money-button[disabled] {
-  cursor: default;
+  /* Mirror `.is-inactive` visual state for attribute-based disabled buttons */
+  cursor: not-allowed;
+  opacity: 0.38;
+  filter: grayscale(0.9) brightness(0.82) saturate(0.6);
+  pointer-events: none;
 }
 
 .page-shell.is-game-view {
-  --layout-stage-width: min(
-    100vw,
-    calc(100dvh * var(--design-width) / var(--design-height)),
-    calc(var(--design-width) * 1px)
-  );
-  --layout-stage-height: calc(
-    var(--layout-stage-width) * var(--design-height) / var(--design-width)
-  );
+  --layout-stage-width: min(100vw,
+      calc(100dvh * var(--design-width) / var(--design-height)),
+      calc(var(--design-width) * 1px));
+  --layout-stage-height: calc(var(--layout-stage-width) * var(--design-height) / var(--design-width));
   /* Reference layout from the target 1920x1080 composition */
   --game-banner-width: calc(var(--layout-stage-width) * 1688 / var(--design-width));
   --game-banner-height: calc(var(--game-banner-width) * 164 / 1688);
@@ -1017,66 +1108,48 @@ body.is-portrait-locked .landscape-lock {
   --game-dropzone-height: calc(var(--game-left-panel-width) * 945 / 2470);
   --game-tray-height: calc(var(--game-left-panel-width) * 442 / 2488);
   --game-controls-max: var(--game-left-panel-width);
-  --game-drop-inset-block-start: max(
-    22px,
-    calc(var(--layout-stage-height) * 30 / var(--design-height))
-  );
-  --game-drop-inset-inline: max(
-    24px,
-    calc(var(--layout-stage-width) * 34 / var(--design-width))
-  );
-  --game-drop-inset-block-end: max(
-    24px,
-    calc(var(--layout-stage-height) * 34 / var(--design-height))
-  );
+  --game-drop-inset-block-start: max(22px,
+      calc(var(--layout-stage-height) * 30 / var(--design-height)));
+  --game-drop-inset-inline: max(24px,
+      calc(var(--layout-stage-width) * 34 / var(--design-width)));
+  --game-drop-inset-block-end: max(24px,
+      calc(var(--layout-stage-height) * 34 / var(--design-height)));
   --game-drop-gap: max(10px, calc(var(--layout-stage-width) * 14 / var(--design-width)));
   --game-undo-size: max(44px, calc(var(--layout-stage-width) * 54 / var(--design-width)));
   --game-undo-edge: max(16px, calc(var(--layout-stage-width) * 26 / var(--design-width)));
-  --game-tray-padding-inline: max(
-    18px,
-    calc(var(--layout-stage-width) * 28 / var(--design-width))
-  );
-  --game-tray-padding-block: max(
-    14px,
-    calc(var(--layout-stage-height) * 16 / var(--design-height))
-  );
+  --game-drop-safe-inline-start: 18px;
+  --game-drop-safe-inline-end: calc(var(--game-undo-size) + var(--game-undo-edge) + 48px);
+  --game-drop-safe-block-start: 16px;
+  --game-drop-safe-block-end: calc(var(--game-undo-size) + 24px);
+  --game-tray-padding-inline: max(18px,
+      calc(var(--layout-stage-width) * 28 / var(--design-width)));
+  --game-tray-padding-block: max(14px,
+      calc(var(--layout-stage-height) * 16 / var(--design-height)));
   --game-money-gap: max(8px, calc(var(--layout-stage-width) * 12 / var(--design-width)));
   --game-coin-size: max(58px, calc(var(--layout-stage-width) * 74 / var(--design-width)));
   --game-ten-size: max(66px, calc(var(--layout-stage-width) * 88 / var(--design-width)));
   --game-note-size: max(136px, calc(var(--layout-stage-width) * 164 / var(--design-width)));
-  --game-note-wide-size: max(
-    148px,
-    calc(var(--layout-stage-width) * 178 / var(--design-width))
-  );
-  --game-check-width: max(
-    260px,
-    calc(var(--layout-stage-width) * 336 / var(--design-width))
-  );
+  --game-note-wide-size: max(148px,
+      calc(var(--layout-stage-width) * 178 / var(--design-width)));
+  --game-check-width: max(260px,
+      calc(var(--layout-stage-width) * 336 / var(--design-width)));
   min-height: 0;
   height: 100%;
   overflow-y: auto;
-  padding-top: max(
-    calc(var(--layout-stage-height) * 18 / var(--design-height)),
-    calc(12px + env(safe-area-inset-top))
-  );
-  padding-right: max(
-    calc(var(--layout-stage-width) * 24 / var(--design-width)),
-    calc(12px + env(safe-area-inset-right))
-  );
-  padding-bottom: max(
-    calc(var(--layout-stage-height) * 24 / var(--design-height)),
-    calc(16px + env(safe-area-inset-bottom))
-  );
-  padding-left: max(
-    calc(var(--layout-stage-width) * 24 / var(--design-width)),
-    calc(12px + env(safe-area-inset-left))
-  );
+  padding-top: max(calc(var(--layout-stage-height) * 18 / var(--design-height)),
+      calc(12px + env(safe-area-inset-top)));
+  padding-right: max(calc(var(--layout-stage-width) * 24 / var(--design-width)),
+      calc(12px + env(safe-area-inset-right)));
+  padding-bottom: max(calc(var(--layout-stage-height) * 24 / var(--design-height)),
+      calc(16px + env(safe-area-inset-bottom)));
+  padding-left: max(calc(var(--layout-stage-width) * 24 / var(--design-width)),
+      calc(12px + env(safe-area-inset-left)));
 }
 
 .page-shell.is-game-view .page-background {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 242, 219, 0.1)),
-    url("assets/Background2.png") center bottom / cover no-repeat;
+    url("assets/Background2.png") center 62% / 112% auto no-repeat;
 }
 
 .page-shell.is-game-view .page-background::after {
@@ -1087,30 +1160,24 @@ body.is-portrait-locked .landscape-lock {
 
 .page-shell.is-game-view .top-banner {
   display: block;
-  width: min(100%, var(--game-banner-width));
+  width: min(100%, 1620px);
   margin: 0 auto;
 }
 
 .page-shell.is-game-view .top-banner__copy {
   min-width: 0;
-  padding:
-    0
-    max(28px, calc(var(--layout-stage-width) * 36 / var(--design-width)))
-    0
-    calc(
-      max(148px, calc(var(--layout-stage-width) * 194 / var(--design-width))) +
-        var(--game-layout-shift-x)
-    );
+  padding: 0 clamp(22px, 2.4vw, 40px) 0 clamp(98px, 13vw, 196px);
+}
+
+html[lang="hi"] .page-shell.is-game-view .top-banner__copy {
+  padding-left: clamp(112px, 13.9vw, 210px);
+  padding-right: clamp(124px, 12vw, 188px);
 }
 
 .page-shell.is-game-view .top-banner h1 {
-  font-size: clamp(
-    0.82rem,
-    calc(var(--layout-stage-width) * 26 / var(--design-width)),
-    1.46rem
-  );
+  font-size: clamp(0.98rem, 1.8vw, 2rem);
   font-weight: 900;
-  line-height: 1.04;
+  line-height: 1;
   color: #78380f;
   text-shadow: 0 1px 0 rgba(255, 252, 244, 0.52);
   min-width: 0;
@@ -1118,6 +1185,14 @@ body.is-portrait-locked .landscape-lock {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
+  font-size: clamp(0.92rem, 1.65vw, 1.72rem);
+  line-height: 1.12;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .page-shell.is-game-view .game-shell {
@@ -1158,11 +1233,9 @@ body.is-portrait-locked .landscape-lock {
   min-height: max(46px, calc(var(--layout-stage-height) * 46 / var(--design-height)));
   padding: 0 max(16px, calc(var(--layout-stage-width) * 20 / var(--design-width)));
   border-radius: 999px;
-  font-size: clamp(
-    0.92rem,
-    calc(var(--layout-stage-width) * 18 / var(--design-width)),
-    1rem
-  );
+  font-size: clamp(0.92rem,
+      calc(var(--layout-stage-width) * 18 / var(--design-width)),
+      1rem);
   box-shadow: 0 10px 16px rgba(108, 56, 20, 0.14);
 }
 
@@ -1194,8 +1267,7 @@ body.is-portrait-locked .landscape-lock {
   margin-inline: auto;
   min-height: 0;
   grid-template-columns:
-    minmax(0, var(--game-left-panel-width))
-    minmax(0, var(--game-machine-width));
+    minmax(0, var(--game-left-panel-width)) minmax(0, var(--game-machine-width));
   grid-template-areas: "controls machine";
   gap: var(--game-column-gap);
   justify-content: start;
@@ -1206,9 +1278,10 @@ body.is-portrait-locked .landscape-lock {
 .page-shell.is-game-view .machine-column {
   grid-area: machine;
   justify-content: center;
-  align-self: center;
+  align-self: end;
   justify-self: center;
   margin-top: 0;
+  margin-bottom: clamp(-6px, calc(var(--layout-stage-height) * -10 / var(--design-height)), -2px);
 }
 
 .page-shell.is-game-view .machine-wrap {
@@ -1228,11 +1301,9 @@ body.is-portrait-locked .landscape-lock {
   left: 50%;
   width: 46%;
   transform: translateX(-50%);
-  font-size: clamp(
-    2.3rem,
-    calc(var(--layout-stage-width) * 60 / var(--design-width)),
-    3.65rem
-  );
+  font-size: clamp(2.3rem,
+      calc(var(--layout-stage-width) * 60 / var(--design-width)),
+      3.65rem);
   font-weight: 900;
   letter-spacing: -0.03em;
   line-height: 0.92;
@@ -1264,15 +1335,13 @@ body.is-portrait-locked .landscape-lock {
 
 .page-shell.is-game-view .machine-meter__fill {
   border-radius: 16px 16px 9px 9px;
-  background: linear-gradient(
-    180deg,
-    #59d22c 0%,
-    #aee332 20%,
-    #f6e54a 44%,
-    #ffb228 68%,
-    #ff6a22 84%,
-    #ff2230 100%
-  );
+  background: linear-gradient(180deg,
+      #59d22c 0%,
+      #aee332 20%,
+      #f6e54a 44%,
+      #ffb228 68%,
+      #ff6a22 84%,
+      #ff2230 100%);
   box-shadow:
     0 0 10px rgba(255, 230, 95, 0.24),
     inset 0 0 10px rgba(255, 255, 255, 0.16);
@@ -1281,12 +1350,10 @@ body.is-portrait-locked .landscape-lock {
 .page-shell.is-game-view .machine-meter__shine {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 20%),
-    linear-gradient(
-      90deg,
+    linear-gradient(90deg,
       rgba(255, 255, 255, 0.08),
       transparent 40%,
-      rgba(255, 255, 255, 0.04)
-    );
+      rgba(255, 255, 255, 0.04));
 }
 
 .page-shell.is-game-view .machine-meter.is-overflowing {
@@ -1298,33 +1365,31 @@ body.is-portrait-locked .landscape-lock {
 
 .page-shell.is-game-view .machine-meter.is-overflowing .machine-meter__fill {
   border-radius: 16px 16px 9px 9px;
-  background: linear-gradient(
-    180deg,
-    #ff8b8b 0%,
-    #ff5252 28%,
-    #ff2929 62%,
-    #cf0f1c 100%
-  );
+  background: linear-gradient(180deg,
+      #ff8b8b 0%,
+      #ff5252 28%,
+      #ff2929 62%,
+      #cf0f1c 100%);
   box-shadow:
     0 0 16px rgba(255, 92, 92, 0.34),
     inset 0 0 12px rgba(255, 255, 255, 0.18);
 }
 
 .page-shell.is-game-view .ticket-bay {
-  left: 49.8%;
-  top: 87.25%;
-  bottom: auto;
+  left: 50%;
+  top: auto;
+  bottom: 11.55%;
   width: 16.2%;
-  height: 15.8%;
-  overflow: hidden;
-  z-index: 4;
+  height: 18%;
+  overflow: visible;
+  z-index: 5;
 }
 
 .page-shell.is-game-view .ticket-bay::before {
   content: "";
   position: absolute;
   left: 50%;
-  top: 0;
+  top: 53%;
   width: 74%;
   height: 4.6%;
   transform: translateX(-50%);
@@ -1343,7 +1408,7 @@ body.is-portrait-locked .landscape-lock {
   content: "";
   position: absolute;
   left: 50%;
-  top: 0.7%;
+  top: 53.7%;
   width: 56%;
   height: 1.05%;
   transform: translateX(-50%);
@@ -1355,9 +1420,10 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .page-shell.is-game-view .ticket-prize {
-  top: 0;
+  top: 54%;
   width: 78%;
-  transform: translate(-50%, -116%);
+  opacity: 0;
+  transform: translate(-50%, 28%);
   z-index: 4;
 }
 
@@ -1402,7 +1468,7 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .machine-column {
-    align-self: start;
+    align-self: end;
   }
 
   .page-shell.is-game-view .machine-wrap {
@@ -1443,59 +1509,79 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .page-shell.is-game-view .machine-dropzone.is-drop-target {
-  transform: scale(1.005);
+  transform: none;
 }
 
 .page-shell.is-game-view .machine-dropzone__hint {
   display: none;
 }
 
+.page-shell.is-game-view .machine-dropzone__hint[hidden],
 .page-shell.is-game-view .machine-dropzone.has-money .machine-dropzone__hint {
-  display: none;
+  display: none !important;
+  opacity: 0;
+  visibility: hidden;
 }
 
 .page-shell.is-game-view .placed-money-layer {
   position: absolute;
-  inset: var(--game-drop-inset-block-start) var(--game-drop-inset-inline)
-    var(--game-drop-inset-block-end);
+  top: calc(var(--game-drop-inset-block-start) + var(--game-drop-safe-block-start));
+  left: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-start));
+  right: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-end));
+  bottom: calc(var(--game-drop-inset-block-end) + var(--game-drop-safe-block-end));
   z-index: 1;
   min-height: 0;
   padding: 0;
+  overflow: hidden;
   justify-content: flex-start;
   align-content: flex-start;
   gap: var(--game-drop-gap);
 }
 
+.page-shell.is-game-view .placed-money {
+  width: clamp(58px,
+      calc(var(--layout-stage-width) * 72 / var(--design-width)),
+      80px);
+  min-height: clamp(58px,
+      calc(var(--layout-stage-width) * 72 / var(--design-width)),
+      80px);
+  flex: 0 0 auto;
+}
+
+.page-shell.is-game-view .placed-money--note {
+  width: clamp(126px,
+      calc(var(--layout-stage-width) * 156 / var(--design-width)),
+      174px);
+}
+
 .page-shell.is-game-view .placed-money__sprite--coin {
-  width: clamp(
-    52px,
-    calc(var(--layout-stage-width) * 64 / var(--design-width)),
-    72px
-  );
+  width: clamp(52px,
+      calc(var(--layout-stage-width) * 64 / var(--design-width)),
+      72px);
 }
 
 .page-shell.is-game-view .placed-money__sprite--note {
-  width: clamp(
-    116px,
-    calc(var(--layout-stage-width) * 146 / var(--design-width)),
-    164px
-  );
+  width: clamp(116px,
+      calc(var(--layout-stage-width) * 146 / var(--design-width)),
+      164px);
 }
 
 .undo-button {
   position: absolute;
-  right: var(--game-undo-edge);
-  bottom: var(--game-undo-edge);
+  right: calc(var(--game-undo-edge) - 2px);
+  bottom: calc(var(--game-undo-edge) - 2px);
   width: var(--game-undo-size);
   height: var(--game-undo-size);
-  border: 0;
-  padding: 0;
-  border-radius: 0;
-  background: none;
+  border: 2px solid rgba(255, 244, 216, 0.94);
+  padding: max(2px, calc(var(--game-undo-size) * 0.05));
+  border-radius: 999px;
+  background: rgba(117, 58, 17, 0.12);
   color: transparent;
   font-size: 0;
   line-height: 0;
-  box-shadow: none;
+  box-shadow:
+    0 8px 12px rgba(116, 59, 18, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
   cursor: pointer;
   transition:
     transform 180ms ease,
@@ -1509,13 +1595,14 @@ body.is-portrait-locked .landscape-lock {
   height: 100%;
   display: block;
   pointer-events: none;
+  filter:
+    drop-shadow(0 0 1px rgba(255, 250, 238, 0.95)) drop-shadow(0 2px 4px rgba(86, 39, 8, 0.22));
 }
 
 .undo-button:hover:not(:disabled) {
   transform: translateY(-3px) scale(1.06) rotate(-8deg);
   filter:
-    drop-shadow(0 0 16px rgba(129, 213, 255, 0.42))
-    drop-shadow(0 8px 12px rgba(61, 151, 204, 0.18));
+    drop-shadow(0 0 16px rgba(129, 213, 255, 0.42)) drop-shadow(0 8px 12px rgba(61, 151, 204, 0.18));
 }
 
 .undo-button:disabled {
@@ -1528,8 +1615,7 @@ body.is-portrait-locked .landscape-lock {
   max-width: var(--game-left-panel-width);
   min-height: var(--game-tray-height);
   aspect-ratio: 2488 / 442;
-  padding: var(--game-tray-padding-block) var(--game-tray-padding-inline)
-    calc(var(--game-tray-padding-block) + 4px);
+  padding: var(--game-tray-padding-block) var(--game-tray-padding-inline) calc(var(--game-tray-padding-block) + 4px);
   border: 0;
   border-radius: 0;
   background: url("assets/moneyContainer.png") center center / 100% 100% no-repeat;
@@ -1542,9 +1628,7 @@ body.is-portrait-locked .landscape-lock {
   min-height: 0;
   display: grid;
   grid-template-columns:
-    repeat(4, minmax(0, 0.72fr))
-    minmax(0, 1.16fr)
-    minmax(0, 1.32fr);
+    repeat(4, minmax(0, 0.72fr)) minmax(0, 1.16fr) minmax(0, 1.32fr);
   align-items: center;
   justify-items: center;
   gap: var(--game-money-gap);
@@ -1561,7 +1645,8 @@ body.is-portrait-locked .landscape-lock {
 }
 
 .page-shell.is-game-view .money-button--ten {
-  max-width: var(--game-ten-size);
+  max-width: var(--game-coin-size);
+  aspect-ratio: 1;
 }
 
 .page-shell.is-game-view .money-button--note {
@@ -1980,13 +2065,11 @@ body.is-portrait-locked .landscape-lock {
 .success-popup[data-theme="rainbow-slide"] .success-popup__lighting--base {
   background:
     radial-gradient(circle at 50% 14%, rgba(255, 239, 196, 0.56), transparent 28%),
-    linear-gradient(
-      125deg,
+    linear-gradient(125deg,
       rgba(255, 167, 197, 0.14),
       rgba(255, 227, 133, 0.08) 28%,
       rgba(173, 233, 255, 0.1) 58%,
-      rgba(255, 171, 225, 0.12) 100%
-    );
+      rgba(255, 171, 225, 0.12) 100%);
 }
 
 .success-popup[data-theme="rainbow-slide"] .success-popup__lighting--beam-1 {
@@ -1995,12 +2078,10 @@ body.is-portrait-locked .landscape-lock {
   width: 78%;
   height: 24%;
   transform: rotate(-15deg);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 140, 182, 0),
-    rgba(255, 248, 255, 0.72) 48%,
-    rgba(123, 219, 255, 0)
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 140, 182, 0),
+      rgba(255, 248, 255, 0.72) 48%,
+      rgba(123, 219, 255, 0));
 }
 
 .success-popup[data-theme="rainbow-slide"] .success-popup__lighting--beam-2 {
@@ -2256,9 +2337,7 @@ body.is-portrait-locked .landscape-lock {
   animation: none;
   transform: translateY(-4px) scale(1.03);
   filter:
-    brightness(1.06)
-    drop-shadow(0 0 16px rgba(123, 218, 255, 0.42))
-    drop-shadow(0 10px 18px rgba(66, 151, 204, 0.2));
+    brightness(1.06) drop-shadow(0 0 16px rgba(123, 218, 255, 0.42)) drop-shadow(0 10px 18px rgba(66, 151, 204, 0.2));
 }
 
 .check-button:active:not(:disabled) {
@@ -2284,6 +2363,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes banner-float {
+
   0%,
   100% {
     transform: translateY(0);
@@ -2295,6 +2375,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes mascot-bob {
+
   0%,
   100% {
     transform: rotate(0deg) scale(1);
@@ -2306,6 +2387,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes machine-idle-bob {
+
   0%,
   100% {
     transform: translateY(0);
@@ -2317,6 +2399,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes goal-glow {
+
   0%,
   100% {
     filter: brightness(1);
@@ -2332,6 +2415,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes button-breathe {
+
   0%,
   100% {
     transform: translateY(0) scale(1);
@@ -2367,6 +2451,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes success-light-sweep {
+
   0%,
   100% {
     transform: translateX(0) scale(1);
@@ -2380,6 +2465,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes success-glow-pulse {
+
   0%,
   100% {
     transform: scale(0.96);
@@ -2393,6 +2479,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes success-wheel-ring {
+
   0%,
   100% {
     transform: translate(-50%, -50%) scale(0.98);
@@ -2406,6 +2493,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes success-headlight-pulse {
+
   0%,
   100% {
     transform: scale(0.94);
@@ -2419,29 +2507,36 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes money-bounce {
+
   0%,
   100% {
     transform: translateY(0) scale(1);
   }
+
   40% {
     transform: translateY(-10px) scale(1.08);
   }
+
   70% {
     transform: translateY(-3px) scale(0.98);
   }
 }
 
 @keyframes money-denied {
+
   0%,
   100% {
     transform: translateX(0);
   }
+
   25% {
     transform: translateX(-5px);
   }
+
   50% {
     transform: translateX(5px);
   }
+
   75% {
     transform: translateX(-3px);
   }
@@ -2478,32 +2573,34 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes meter-victory-pulse {
+
   0%,
   100% {
     transform: translateX(-50%) scale(1);
     filter:
-      drop-shadow(0 0 12px rgba(255, 241, 119, 0.92))
-      drop-shadow(0 0 24px rgba(255, 220, 74, 0.54));
+      drop-shadow(0 0 12px rgba(255, 241, 119, 0.92)) drop-shadow(0 0 24px rgba(255, 220, 74, 0.54));
   }
+
   50% {
     transform: translateX(-50%) scale(1.08);
     filter:
-      drop-shadow(0 0 14px rgba(255, 245, 148, 1))
-      drop-shadow(0 0 30px rgba(255, 219, 67, 0.78));
+      drop-shadow(0 0 14px rgba(255, 245, 148, 1)) drop-shadow(0 0 30px rgba(255, 219, 67, 0.78));
   }
 }
 
 @keyframes ticket-rise {
   0% {
     opacity: 0;
-    transform: translate(-50%, -124%);
+    transform: translate(-50%, 36%) scale(0.92);
   }
+
   18% {
     opacity: 1;
   }
+
   100% {
     opacity: 1;
-    transform: translate(-50%, 12%);
+    transform: translate(-50%, -60%) scale(1);
   }
 }
 
@@ -2512,6 +2609,7 @@ body.is-portrait-locked .landscape-lock {
     opacity: 0;
     transform: translateY(36px) scale(0.84);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -2519,10 +2617,12 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes success-icon-bob {
+
   0%,
   100% {
     transform: translateX(-50%) translateY(0) scale(1);
   }
+
   50% {
     transform: translateX(-50%) translateY(-4px) scale(1.03);
   }
@@ -2533,10 +2633,12 @@ body.is-portrait-locked .landscape-lock {
     opacity: 0;
     transform: rotate(var(--spark-rotate)) translateY(12px) scale(0.32);
   }
+
   55% {
     opacity: 1;
     transform: rotate(var(--spark-rotate)) translateY(0) scale(1);
   }
+
   100% {
     opacity: 0.82;
     transform: rotate(var(--spark-rotate)) translateY(0) scale(0.96);
@@ -2548,13 +2650,14 @@ body.is-portrait-locked .landscape-lock {
     opacity: 0;
     transform: translate(-50%, -10%) scale(0.62) rotate(0deg);
   }
+
   10% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--tx)), var(--ty))
-      scale(1) rotate(var(--rot));
+    transform: translate(calc(-50% + var(--tx)), var(--ty)) scale(1) rotate(var(--rot));
   }
 }
 
@@ -2648,11 +2751,11 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .top-banner__copy {
-    padding: 0 clamp(18px, 2vw, 26px) 0 clamp(112px, 10vw, 152px);
+    padding: 0 clamp(22px, 2.4vw, 40px) 0 clamp(98px, 13vw, 196px);
   }
 
   .page-shell.is-game-view .top-banner h1 {
-    font-size: clamp(0.94rem, 1.65vw, 1.62rem);
+    font-size: clamp(0.98rem, 1.8vw, 2rem);
   }
 
   .page-shell.is-game-view .game-screen {
@@ -2679,7 +2782,7 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .machine-column {
-    align-self: center;
+    align-self: end;
   }
 
   .page-shell.is-game-view .machine-wrap {
@@ -2691,8 +2794,7 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .placed-money-layer {
-    inset: clamp(18px, 4vw, 28px) clamp(18px, 5vw, 30px)
-      clamp(22px, 5vw, 34px);
+    inset: clamp(18px, 4vw, 28px) clamp(18px, 5vw, 30px) clamp(22px, 5vw, 34px);
   }
 
   .page-shell.is-game-view .controls-panel {
@@ -2839,10 +2941,8 @@ body.is-portrait-locked .landscape-lock {
     --game-left-panel-width: 100%;
     --game-controls-max: 100%;
     --game-layout-shift-x: 0px;
-    --game-machine-width: min(
-      100%,
-      max(300px, calc(var(--layout-stage-width) * 372 / var(--design-width)))
-    );
+    --game-machine-width: min(100%,
+        max(300px, calc(var(--layout-stage-width) * 372 / var(--design-width))));
     --game-column-gap: calc(var(--layout-stage-height) * 22 / var(--design-height));
     --game-dropzone-height: auto;
     --game-tray-height: auto;
@@ -2886,56 +2986,36 @@ body.is-portrait-locked .landscape-lock {
     --game-rail-width: 44px;
     --game-section-gap: 0px;
     --game-column-gap: calc(var(--layout-stage-width) * 20 / var(--design-width));
-    --game-controls-max: min(
-      100%,
-      max(320px, calc(var(--layout-stage-width) * 720 / var(--design-width)))
-    );
-    --game-machine-width: min(
-      100%,
-      max(300px, calc(var(--layout-stage-width) * 390 / var(--design-width)))
-    );
+    --game-controls-max: min(100%,
+        max(320px, calc(var(--layout-stage-width) * 720 / var(--design-width))));
+    --game-machine-width: min(100%,
+        max(300px, calc(var(--layout-stage-width) * 390 / var(--design-width))));
     --game-dropzone-height: auto;
     --game-tray-height: auto;
     --game-top-gap: calc(var(--layout-stage-height) * 16 / var(--design-height));
     --game-back-offset: 0px;
     --game-stack-gap: calc(var(--layout-stage-height) * 14 / var(--design-height));
     --game-check-gap: calc(var(--layout-stage-height) * 16 / var(--design-height));
-    --game-drop-inset-block-start: max(
-      18px,
-      calc(var(--layout-stage-height) * 24 / var(--design-height))
-    );
-    --game-drop-inset-inline: max(
-      18px,
-      calc(var(--layout-stage-width) * 28 / var(--design-width))
-    );
-    --game-drop-inset-block-end: max(
-      20px,
-      calc(var(--layout-stage-height) * 28 / var(--design-height))
-    );
+    --game-drop-inset-block-start: max(18px,
+        calc(var(--layout-stage-height) * 24 / var(--design-height)));
+    --game-drop-inset-inline: max(18px,
+        calc(var(--layout-stage-width) * 28 / var(--design-width)));
+    --game-drop-inset-block-end: max(20px,
+        calc(var(--layout-stage-height) * 28 / var(--design-height)));
     --game-undo-edge: max(14px, calc(var(--layout-stage-width) * 18 / var(--design-width)));
-    --game-tray-padding-inline: max(
-      18px,
-      calc(var(--layout-stage-width) * 22 / var(--design-width))
-    );
-    --game-tray-padding-block: max(
-      14px,
-      calc(var(--layout-stage-height) * 14 / var(--design-height))
-    );
+    --game-tray-padding-inline: max(18px,
+        calc(var(--layout-stage-width) * 22 / var(--design-width)));
+    --game-tray-padding-block: max(14px,
+        calc(var(--layout-stage-height) * 14 / var(--design-height)));
     --game-money-gap: max(10px, calc(var(--layout-stage-width) * 12 / var(--design-width)));
     --game-coin-size: max(64px, calc(var(--layout-stage-width) * 72 / var(--design-width)));
     --game-ten-size: max(72px, calc(var(--layout-stage-width) * 82 / var(--design-width)));
-    --game-note-size: max(
-      146px,
-      calc(var(--layout-stage-width) * 150 / var(--design-width))
-    );
-    --game-note-wide-size: max(
-      158px,
-      calc(var(--layout-stage-width) * 164 / var(--design-width))
-    );
-    --game-check-width: min(
-      100%,
-      max(260px, calc(var(--layout-stage-width) * 320 / var(--design-width)))
-    );
+    --game-note-size: max(146px,
+        calc(var(--layout-stage-width) * 150 / var(--design-width)));
+    --game-note-wide-size: max(158px,
+        calc(var(--layout-stage-width) * 164 / var(--design-width)));
+    --game-check-width: min(100%,
+        max(260px, calc(var(--layout-stage-width) * 320 / var(--design-width))));
   }
 
   .page-shell.is-game-view .game-screen {
@@ -2957,12 +3037,10 @@ body.is-portrait-locked .landscape-lock {
 
   .page-shell.is-game-view .page-background {
     background:
-      linear-gradient(
-        180deg,
+      linear-gradient(180deg,
         rgba(255, 255, 255, 0.05),
-        rgba(255, 242, 219, 0.1)
-      ),
-      url("assets/Background2.png") center bottom / cover no-repeat;
+        rgba(255, 242, 219, 0.1)),
+      url("assets/Background2.png") center 62% / 112% auto no-repeat;
   }
 
   .page-shell.is-game-view .board-layout {
@@ -3036,11 +3114,9 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .machine-goal {
-    font-size: clamp(
-      2rem,
-      calc(var(--layout-stage-width) * 54 / var(--design-width)),
-      3.2rem
-    );
+    font-size: clamp(2rem,
+        calc(var(--layout-stage-width) * 54 / var(--design-width)),
+        3.2rem);
   }
 
   .page-shell.is-game-view .controls-column {
@@ -3059,9 +3135,12 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .placed-money-layer {
-    inset: var(--game-drop-inset-block-start) var(--game-drop-inset-inline)
-      var(--game-drop-inset-block-end);
-    justify-content: center;
+    top: calc(var(--game-drop-inset-block-start) + var(--game-drop-safe-block-start));
+    left: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-start));
+    right: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-end));
+    bottom: calc(var(--game-drop-inset-block-end) + var(--game-drop-safe-block-end));
+    justify-content: flex-start;
+    align-content: flex-start;
     gap: var(--game-drop-gap);
   }
 
@@ -3101,29 +3180,19 @@ body.is-portrait-locked .landscape-lock {
 @media (max-width: 620px) {
   .page-shell.is-game-view {
     --game-rail-width: 44px;
-    --game-machine-width: min(
-      100%,
-      max(252px, calc(var(--layout-stage-width) * 320 / var(--design-width)))
-    );
-    --game-drop-inset-block-start: max(
-      16px,
-      calc(var(--layout-stage-height) * 18 / var(--design-height))
-    );
-    --game-drop-inset-inline: max(
-      16px,
-      calc(var(--layout-stage-width) * 18 / var(--design-width))
-    );
-    --game-drop-inset-block-end: max(
-      18px,
-      calc(var(--layout-stage-height) * 20 / var(--design-height))
-    );
+    --game-machine-width: min(100%,
+        max(252px, calc(var(--layout-stage-width) * 320 / var(--design-width))));
+    --game-drop-inset-block-start: max(16px,
+        calc(var(--layout-stage-height) * 18 / var(--design-height)));
+    --game-drop-inset-inline: max(16px,
+        calc(var(--layout-stage-width) * 18 / var(--design-width)));
+    --game-drop-inset-block-end: max(18px,
+        calc(var(--layout-stage-height) * 20 / var(--design-height)));
     --game-coin-size: max(58px, calc(var(--layout-stage-width) * 64 / var(--design-width)));
     --game-ten-size: max(62px, calc(var(--layout-stage-width) * 70 / var(--design-width)));
     --game-note-size: max(172px, calc(var(--layout-stage-width) * 172 / var(--design-width)));
-    --game-note-wide-size: max(
-      180px,
-      calc(var(--layout-stage-width) * 180 / var(--design-width))
-    );
+    --game-note-wide-size: max(180px,
+        calc(var(--layout-stage-width) * 180 / var(--design-width)));
     --game-check-width: min(100%, 260px);
   }
 
@@ -3150,11 +3219,9 @@ body.is-portrait-locked .landscape-lock {
 
   .page-shell.is-game-view .machine-goal {
     width: 48%;
-    font-size: clamp(
-      1.9rem,
-      calc(var(--layout-stage-width) * 52 / var(--design-width)),
-      2.7rem
-    );
+    font-size: clamp(1.9rem,
+        calc(var(--layout-stage-width) * 52 / var(--design-width)),
+        2.7rem);
   }
 
   .page-shell.is-game-view .machine-dropzone {
@@ -3162,8 +3229,10 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .placed-money-layer {
-    inset: var(--game-drop-inset-block-start) var(--game-drop-inset-inline)
-      var(--game-drop-inset-block-end);
+    top: calc(var(--game-drop-inset-block-start) + var(--game-drop-safe-block-start));
+    left: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-start));
+    right: calc(var(--game-drop-inset-inline) + var(--game-drop-safe-inline-end));
+    bottom: calc(var(--game-drop-inset-block-end) + var(--game-drop-safe-block-end));
     gap: var(--game-drop-gap);
   }
 
@@ -3176,8 +3245,7 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .controls-panel {
-    padding: var(--game-tray-padding-block) var(--game-tray-padding-inline)
-      calc(var(--game-tray-padding-block) + 2px);
+    padding: var(--game-tray-padding-block) var(--game-tray-padding-inline) calc(var(--game-tray-padding-block) + 2px);
     overflow: hidden;
   }
 
@@ -3222,28 +3290,40 @@ body.is-portrait-locked .landscape-lock {
     padding: 0 10px 0 58px;
   }
 
+  html[lang="hi"] .top-banner__copy {
+    padding: 0 92px 0 68px;
+  }
+
+  .language-toggle {
+    top: -16px;
+    right: 10px;
+    min-width: 116px;
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 0.7rem;
+    gap: 6px;
+  }
+
   .top-banner h1 {
     font-size: clamp(0.72rem, 3.6vw, 0.92rem);
   }
 
+  html[lang="hi"] .top-banner h1 {
+    font-size: clamp(0.68rem, 3.15vw, 0.82rem);
+  }
+
   .page-shell.is-game-view {
-    --game-machine-width: min(
-      100%,
-      max(248px, calc(var(--layout-stage-width) * 280 / var(--design-width)))
-    );
+    --game-machine-width: min(100%,
+        max(248px, calc(var(--layout-stage-width) * 280 / var(--design-width))));
     --game-stack-gap: calc(var(--layout-stage-height) * 12 / var(--design-height));
     --game-money-gap: max(8px, calc(var(--layout-stage-width) * 10 / var(--design-width)));
     --game-coin-size: max(52px, calc(var(--layout-stage-width) * 58 / var(--design-width)));
     --game-ten-size: max(56px, calc(var(--layout-stage-width) * 62 / var(--design-width)));
     --game-note-size: max(154px, calc(var(--layout-stage-width) * 154 / var(--design-width)));
-    --game-note-wide-size: max(
-      160px,
-      calc(var(--layout-stage-width) * 160 / var(--design-width))
-    );
-    --game-tray-padding-inline: max(
-      8px,
-      calc(var(--layout-stage-width) * 12 / var(--design-width))
-    );
+    --game-note-wide-size: max(160px,
+        calc(var(--layout-stage-width) * 160 / var(--design-width)));
+    --game-tray-padding-inline: max(8px,
+        calc(var(--layout-stage-width) * 12 / var(--design-width)));
   }
 
   .page-shell.is-game-view .machine-dropzone {
@@ -3251,8 +3331,7 @@ body.is-portrait-locked .landscape-lock {
   }
 
   .page-shell.is-game-view .controls-panel {
-    padding: var(--game-tray-padding-block) var(--game-tray-padding-inline)
-      calc(var(--game-tray-padding-block) + 2px);
+    padding: var(--game-tray-padding-block) var(--game-tray-padding-inline) calc(var(--game-tray-padding-block) + 2px);
   }
 
   .page-shell.is-game-view .money-tray {
@@ -3288,19 +3367,34 @@ body.is-portrait-locked .landscape-lock {
     padding: 0 8px 0 52px;
   }
 
+  html[lang="hi"] .top-banner__copy {
+    padding: 0 84px 0 62px;
+  }
+
+  .language-toggle {
+    top: -14px;
+    right: 8px;
+    min-width: 108px;
+    min-height: 32px;
+    padding: 6px 9px;
+    font-size: 0.66rem;
+    gap: 5px;
+  }
+
   .top-banner h1 {
     font-size: 0.68rem;
   }
 
+  html[lang="hi"] .top-banner h1 {
+    font-size: 0.61rem;
+    line-height: 1.08;
+  }
+
   .page-shell.is-game-view {
-    --game-machine-width: min(
-      100%,
-      max(228px, calc(var(--layout-stage-width) * 252 / var(--design-width)))
-    );
-    --game-note-wide-size: max(
-      148px,
-      calc(var(--layout-stage-width) * 148 / var(--design-width))
-    );
+    --game-machine-width: min(100%,
+        max(228px, calc(var(--layout-stage-width) * 252 / var(--design-width))));
+    --game-note-wide-size: max(148px,
+        calc(var(--layout-stage-width) * 148 / var(--design-width)));
   }
 }
 
@@ -3320,6 +3414,15 @@ body.is-portrait-locked .landscape-lock {
   .page-shell.is-selection-view .top-banner__copy {
     align-items: center;
     padding: 0 16px 0 92px;
+  }
+
+  html[lang="hi"] .page-shell.is-selection-view .top-banner__copy {
+    padding: 0 94px 0 102px;
+  }
+
+  .page-shell.is-selection-view .language-toggle {
+    top: -16px;
+    right: 12px;
   }
 
   .page-shell.is-selection-view .top-banner h1 {
@@ -3377,6 +3480,7 @@ body.is-portrait-locked .landscape-lock {
 }
 
 @keyframes landscape-lock-rotate {
+
   0%,
   100% {
     transform: rotate(0deg) scale(0.96);

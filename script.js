@@ -7,8 +7,6 @@ const {
 const LEVELS = Object.freeze([
   Object.freeze({
     id: "merry-go-round",
-    name: "Merry-Go-Round",
-    selectionName: "Carousel",
     targetAmount: 10,
     overflowTolerance: 0,
     ruleType: LEVEL_RULE_TYPES.SAME_DENOMINATION,
@@ -18,8 +16,6 @@ const LEVELS = Object.freeze([
   }),
   Object.freeze({
     id: "rainbow-slide",
-    name: "Rainbow-Slide",
-    selectionName: "Roller Ride",
     targetAmount: 13,
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
@@ -29,8 +25,6 @@ const LEVELS = Object.freeze([
   }),
   Object.freeze({
     id: "giant-wheel",
-    name: "Giant-Wheel",
-    selectionName: "Ferris Wheel",
     targetAmount: 7,
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
@@ -40,8 +34,6 @@ const LEVELS = Object.freeze([
   }),
   Object.freeze({
     id: "bumper-car",
-    name: "Bumper-Car",
-    selectionName: "Car Ride",
     targetAmount: 20,
     overflowTolerance: 3,
     ruleType: LEVEL_RULE_TYPES.MIXED,
@@ -62,16 +54,74 @@ const confettiColors = Object.freeze([
 ]);
 
 const successCueAudioConfig = Object.freeze({
-  path: "audios/CorrectSound.mp3",
+  path: "audios/CorrectSound.ogg",
   fallbackDurationMs: 5643,
   volume: 0.92,
 });
 
 const successCheerAudioConfig = Object.freeze({
-  path: "audios/mykelu-crowd-cheering-383111.mp3",
+  path: "audios/mykelu-crowd-cheering-383111.ogg",
   fallbackDurationMs: 5112,
   volume: 0.9,
 });
+const instructionNarrationConfig = Object.freeze({
+  en: Object.freeze({
+    welcome: Object.freeze({
+      path: "audios/WelcomeToCarnivalCoins.ogg",
+      volume: 0.96,
+    }),
+    make10: Object.freeze({
+      path: "audios/make10.ogg",
+      volume: 0.96,
+    }),
+    make13: Object.freeze({
+      path: "audios/make13.ogg",
+      volume: 0.96,
+    }),
+    make7: Object.freeze({
+      path: "audios/make7.ogg",
+      volume: 0.96,
+    }),
+    make20: Object.freeze({
+      path: "audios/make20.ogg",
+      volume: 0.96,
+    }),
+    tooMuch: Object.freeze({
+      path: "audios/thatisToomuch.ogg",
+      volume: 0.96,
+    }),
+  }),
+  hi: Object.freeze({
+    hindiWelcome: Object.freeze({
+      path: "audios/HindiWelcomeToCarnivalCoins.ogg",
+      volume: 0.96,
+    }),
+    hindiMake10: Object.freeze({
+      path: "audios/Hindimake10.ogg",
+      volume: 0.96,
+    }),
+    hindiMake13: Object.freeze({
+      path: "audios/Hindimake13.ogg",
+      volume: 0.96,
+    }),
+    hindiMake7: Object.freeze({
+      path: "audios/Hindimake7.ogg",
+      volume: 0.96,
+    }),
+    hindiMake20: Object.freeze({
+      path: "audios/Hindimake20.ogg",
+      volume: 0.96,
+    }),
+    hindiTooMuch: Object.freeze({
+      path: "audios/HindithatisToomuch.ogg",
+      volume: 0.96,
+    }),
+  }),
+});
+const placedMoneyMeasureTolerancePx = 2;
+const placedMoneyBoundaryPaddingPx = 14;
+const placedMoneyRowTolerancePx = 6;
+const placedMoneyMaxRows = 3;
 
 const assetPaths = Object.freeze([
   "assets/TransitionScreenBG.png",
@@ -117,11 +167,16 @@ let isRetryMode = false;
 let isSuccessPopupOpen = false;
 let successCueAudio = null;
 let successCheerAudio = null;
+let instructionNarrationAudio = null;
+let lastInstructionNarrationSignature = "";
 let confettiCanvas = null;
 let confettiContext = null;
 let confettiAnimationFrame = 0;
 let confettiLastFrameTime = 0;
 let confettiParticles = [];
+let translations = {};
+let currentLanguage = "en";
+const languageStorageKey = "money-meter-language";
 
 const pageShell = document.querySelector(".page-shell");
 const landscapeLock = document.getElementById("landscapeLock");
@@ -148,8 +203,23 @@ const checkButtonLabel = document.getElementById("checkButtonLabel");
 const confettiLayer = document.getElementById("confettiLayer");
 const successPopup = document.getElementById("successPopup");
 const successPopupImage = document.getElementById("successPopupImage");
+const successPopupEyebrow = document.getElementById("successPopupEyebrow");
 const successPopupTitle = document.getElementById("successPopupTitle");
 const successPopupSubtitle = document.getElementById("successPopupSubtitle");
+const documentTitle = document.getElementById("documentTitle");
+const selectionTitle = document.getElementById("selectionTitle");
+const machineColumn = document.getElementById("machineColumn");
+const ticketPrizeText = document.getElementById("ticketPrizeText");
+const dropPanel = document.getElementById("dropPanel");
+const controlsPanel = document.getElementById("controlsPanel");
+const backButtonText = document.getElementById("backButtonText");
+const undoButtonText = document.getElementById("undoButtonText");
+const checkButtonSrText = document.getElementById("checkButtonSrText");
+const landscapeLockTitle = document.getElementById("landscapeLockTitle");
+const landscapeLockMessage = document.getElementById("landscapeLockMessage");
+const languageToggle = document.getElementById("languageToggle");
+const languageToggleEnglish = document.getElementById("languageToggleEnglish");
+const languageToggleHindi = document.getElementById("languageToggleHindi");
 const moneyButtons = [...document.querySelectorAll(".money-button")];
 const moneyButtonByKind = new Map(
   moneyButtons.map((button) => [button.dataset.moneyKind, button]),
@@ -163,13 +233,411 @@ const moneyDefinitions = new Map(
       Object.freeze({
         kind: button.dataset.moneyKind,
         value: Number(button.dataset.value),
-        label: button.getAttribute("aria-label") || formatDenomination(Number(button.dataset.value)),
         src: sprite instanceof HTMLImageElement ? sprite.getAttribute("src") || "" : "",
         isNote: button.classList.contains("money-button--note"),
       }),
     ];
   }),
 );
+
+function interpolate(template, variables = {}) {
+  return Object.entries(variables).reduce((result, [key, value]) => {
+    return result.replaceAll(`{${key}}`, String(value));
+  }, String(template ?? ""));
+}
+
+function getLanguagePack() {
+  return translations[currentLanguage] || translations.en || {};
+}
+
+function getTranslationValue(path) {
+  return path.split(".").reduce((value, key) => {
+    if (value && typeof value === "object" && key in value) {
+      return value[key];
+    }
+
+    return undefined;
+  }, getLanguagePack());
+}
+
+function t(path, variables = {}) {
+  const value = getTranslationValue(path);
+
+  if (typeof value === "string") {
+    return interpolate(value, variables);
+  }
+
+  return value;
+}
+
+function getLevelDisplayName(level) {
+  if (!level) {
+    return "";
+  }
+
+  return t(`levels.${level.id}.name`) || level.id;
+}
+
+function getSelectionCardTitle(level) {
+  if (!level) {
+    return t("selection.cardFallbackTitle") || "";
+  }
+
+  return t(`levels.${level.id}.selectionName`) || getLevelDisplayName(level);
+}
+
+function getRideWord(count) {
+  return count === 1 ? t("selection.rideWordOne") : t("selection.rideWordOther");
+}
+
+function getDenominationTranslationKey(kind) {
+  return kind.replace("-", "_");
+}
+
+function getDenominationLabel(kind, value) {
+  return t(`denominations.${getDenominationTranslationKey(kind)}`) || formatDenomination(value);
+}
+
+function getEmbeddedTranslations() {
+  const element = document.getElementById("translationsData");
+
+  if (!element) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(element.textContent || "");
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function loadTranslations() {
+  let payload = getEmbeddedTranslations();
+
+  if (!payload) {
+    try {
+      const response = await fetch("translations.json", { cache: "no-cache" });
+      payload = await response.json();
+    } catch (_error) {
+      payload = {
+        defaultLanguage: "en",
+        en: {
+          meta: { title: "Money Meter" },
+          language: {
+            toggleHindiButton: "हिंदी",
+            toggleEnglishButton: "English",
+            toggleButtonLabel: "Switch language to {language}"
+          },
+          banner: { welcome: "Welcome to the Carnival Coins!" },
+          status: {
+            chooseNextLevel: "Choose a ride to start the next level.",
+            chooseRideBegin: "Choose a ride to begin."
+          },
+          selection: {
+            screenLabel: "Ride levels",
+            title: "Choose a carnival ride",
+            cardFallbackTitle: "Carnival Ride",
+            ruleBadge: "Any money allowed",
+            doneBadge: "Done",
+            targetLabel: "target",
+            rideWordOne: "ride",
+            rideWordOther: "rides"
+          },
+          controls: {
+            back: "Back",
+            undo: "Undo",
+            undoLastDrop: "Undo last drop",
+            check: "Check",
+            tryAgain: "Try Again",
+            chooseDenomination: "Choose a denomination"
+          },
+          machine: {
+            columnLabel: "Money meter machine",
+            imageAlt: "Money meter machine",
+            ticketLabel: "TICKET",
+            dropPanelLabel: "Drop money here",
+            dropZoneLabel: "Drop money into the machine",
+            dropHintDefault: "Drag and Drop here",
+            dropHintAddHere: "Drag or tap money to add it here",
+            meterNoRideSelected: "No ride selected"
+          },
+          hints: {
+            addMoneyThenCheck: "Add any money until you reach the target, then press Check."
+          },
+          successPopup: {
+            eyebrow: "Ticket Unlocked",
+            title: "Great Job!",
+            subtitle: "{rideName} ticket unlocked!",
+            imageAlt: "{rideName} success screen"
+          },
+          orientation: {
+            title: "Landscape Mode Only",
+            message: "Rotate your device sideways to continue playing the carnival game."
+          },
+          aria: {
+            rideCard: "{selectionTitle}, {targetLabel} {amount}, {ruleLabel}"
+          },
+          denominations: {
+            coin_1: "₹1 coin",
+            coin_2: "₹2 coin",
+            coin_5: "₹5 coin",
+            coin_10: "₹10 coin",
+            note_10: "₹10 note",
+            note_20: "₹20 note"
+          },
+          levels: {
+            "merry-go-round": { name: "Merry-Go-Round", selectionName: "Carousel" },
+            "rainbow-slide": { name: "Rainbow-Slide", selectionName: "Roller Ride" },
+            "giant-wheel": { name: "Giant-Wheel", selectionName: "Ferris Wheel" },
+            "bumper-car": { name: "Bumper-Car", selectionName: "Car Ride" }
+          }
+        },
+        hi: {
+          meta: { title: "मनी मीटर" },
+          language: {
+            toggleHindiButton: "हिंदी",
+            toggleEnglishButton: "English",
+            toggleButtonLabel: "भाषा {language} में बदलें"
+          },
+          banner: { welcome: "कार्निवल कॉइन्स में आपका स्वागत है!" },
+          status: {
+            chooseNextLevel: "अगला स्तर शुरू करने के लिए कोई राइड चुनें।",
+            chooseRideBegin: "शुरू करने के लिए कोई राइड चुनें।"
+          },
+          selection: {
+            screenLabel: "राइड स्तर",
+            title: "कोई कार्निवल राइड चुनें",
+            cardFallbackTitle: "कार्निवल राइड",
+            ruleBadge: "कोई भी पैसा मान्य है",
+            doneBadge: "पूरा",
+            targetLabel: "लक्ष्य",
+            rideWordOne: "राइड",
+            rideWordOther: "राइड"
+          },
+          controls: {
+            back: "वापस",
+            undo: "पूर्ववत",
+            undoLastDrop: "आखिरी ड्रॉप पूर्ववत करें",
+            check: "जांचें",
+            tryAgain: "फिर से कोशिश करें",
+            chooseDenomination: "कोई राशि चुनें"
+          },
+          machine: {
+            columnLabel: "मनी मीटर मशीन",
+            imageAlt: "मनी मीटर मशीन",
+            ticketLabel: "टिकट",
+            dropPanelLabel: "पैसा यहां डालें",
+            dropZoneLabel: "पैसा मशीन में डालें",
+            dropHintDefault: "खींचकर यहां छोड़ें",
+            dropHintAddHere: "पैसा जोड़ने के लिए यहां खींचें या टैप करें",
+            meterNoRideSelected: "कोई राइड चयनित नहीं है"
+          },
+          hints: {
+            addMoneyThenCheck: "लक्ष्य तक पहुंचने तक पैसा जोड़ें, फिर जांचें दबाएं।"
+          },
+          successPopup: {
+            eyebrow: "टिकट अनलॉक हुआ",
+            title: "बहुत बढ़िया!",
+            subtitle: "{rideName} का टिकट अनलॉक हो गया!",
+            imageAlt: "{rideName} सफलता स्क्रीन"
+          },
+          orientation: {
+            title: "केवल लैंडस्केप मोड",
+            message: "कार्निवल गेम खेलना जारी रखने के लिए अपने डिवाइस को घुमाएं।"
+          },
+          aria: {
+            rideCard: "{selectionTitle}, {targetLabel} {amount}, {ruleLabel}"
+          },
+          denominations: {
+            coin_1: "₹1 का सिक्का",
+            coin_2: "₹2 का सिक्का",
+            coin_5: "₹5 का सिक्का",
+            coin_10: "₹10 का सिक्का",
+            note_10: "₹10 का नोट",
+            note_20: "₹20 का नोट"
+          },
+          levels: {
+            "merry-go-round": { name: "मेरी-गो-राउंड", selectionName: "कैरोसेल" },
+            "rainbow-slide": { name: "रेनबो-स्लाइड", selectionName: "रोलर राइड" },
+            "giant-wheel": { name: "जायंट-व्हील", selectionName: "फेरिस व्हील" },
+            "bumper-car": { name: "बम्पर-कार", selectionName: "कार राइड" }
+          }
+        }
+      };
+    }
+  }
+
+  translations = payload || {};
+  const defaultLanguage = payload.defaultLanguage || "en";
+  const savedLanguage = window.localStorage?.getItem(languageStorageKey);
+  currentLanguage =
+    savedLanguage && payload[savedLanguage]
+      ? savedLanguage
+      : defaultLanguage;
+}
+
+function setDocumentLanguage() {
+  document.documentElement.lang = currentLanguage;
+}
+
+function refreshLanguageToggle() {
+  if (!languageToggle || !languageToggleEnglish || !languageToggleHindi) {
+    return;
+  }
+
+  const isEnglish = currentLanguage === "en";
+
+  languageToggleEnglish.textContent = t("language.toggleEnglishButton");
+  languageToggleHindi.textContent = t("language.toggleHindiButton");
+  languageToggle.dataset.language = currentLanguage;
+  languageToggleEnglish.classList.toggle("is-active", isEnglish);
+  languageToggleHindi.classList.toggle("is-active", !isEnglish);
+  languageToggle.setAttribute(
+    "aria-label",
+    isEnglish
+      ? t("language.toggleButtonLabel", {
+        language: t("language.toggleHindiButton"),
+      })
+      : t("language.toggleButtonLabel", {
+        language: t("language.toggleEnglishButton"),
+      }),
+  );
+}
+
+function refreshSuccessPopupCopy() {
+  const level = getActiveLevel();
+
+  if (!isSuccessPopupOpen || !level) {
+    return;
+  }
+
+  if (successPopupEyebrow) {
+    successPopupEyebrow.textContent = t("successPopup.eyebrow");
+  }
+
+  if (successPopupTitle) {
+    successPopupTitle.textContent = t("successPopup.title");
+  }
+
+  if (successPopupSubtitle) {
+    successPopupSubtitle.textContent = t("successPopup.subtitle", {
+      rideName: getLevelDisplayName(level),
+    });
+  }
+
+  if (successPopupImage) {
+    successPopupImage.alt = t("successPopup.imageAlt", {
+      rideName: getLevelDisplayName(level),
+    });
+  }
+}
+
+function setLanguage(language) {
+  if (!translations[language]) {
+    return;
+  }
+
+  currentLanguage = language;
+  window.localStorage?.setItem(languageStorageKey, language);
+  lastInstructionNarrationSignature = "";
+  resetInstructionNarrationAudio();
+  setDocumentLanguage();
+  applyStaticTranslations();
+  refreshLanguageToggle();
+  updateGame();
+  refreshSuccessPopupCopy();
+}
+
+function applyStaticTranslations() {
+  setDocumentLanguage();
+  document.title = t("meta.title");
+
+  if (documentTitle) {
+    documentTitle.textContent = t("meta.title");
+  }
+
+  if (selectionScreen) {
+    selectionScreen.setAttribute("aria-label", t("selection.screenLabel"));
+  }
+
+  if (selectionTitle) {
+    selectionTitle.textContent = t("selection.title");
+  }
+
+  if (backButton) {
+    backButton.setAttribute("aria-label", t("controls.back"));
+  }
+
+  if (backButtonText) {
+    backButtonText.textContent = t("controls.back");
+  }
+
+  if (machineColumn) {
+    machineColumn.setAttribute("aria-label", t("machine.columnLabel"));
+  }
+
+  if (machineImage) {
+    machineImage.alt = t("machine.imageAlt");
+  }
+
+  if (ticketPrizeText) {
+    ticketPrizeText.textContent = t("machine.ticketLabel");
+  }
+
+  if (dropPanel) {
+    dropPanel.setAttribute("aria-label", t("machine.dropPanelLabel"));
+  }
+
+  if (machineDropZone) {
+    machineDropZone.setAttribute("aria-label", t("machine.dropZoneLabel"));
+  }
+
+  if (undoButton) {
+    undoButton.setAttribute("aria-label", t("controls.undoLastDrop"));
+  }
+
+  if (undoButtonText) {
+    undoButtonText.textContent = t("controls.undo");
+  }
+
+  if (controlsPanel) {
+    controlsPanel.setAttribute("aria-label", t("controls.chooseDenomination"));
+  }
+
+  moneyButtons.forEach((button) => {
+    button.setAttribute(
+      "aria-label",
+      getDenominationLabel(button.dataset.moneyKind, Number(button.dataset.value)),
+    );
+  });
+
+  if (checkButton) {
+    checkButton.setAttribute("aria-label", t("controls.check"));
+  }
+
+  if (checkButtonSrText) {
+    checkButtonSrText.textContent = t("controls.check");
+  }
+
+  if (successPopupEyebrow) {
+    successPopupEyebrow.textContent = t("successPopup.eyebrow");
+  }
+
+  if (successPopupTitle) {
+    successPopupTitle.textContent = t("successPopup.title");
+  }
+
+  if (landscapeLockTitle) {
+    landscapeLockTitle.textContent = t("orientation.title");
+  }
+
+  if (landscapeLockMessage) {
+    landscapeLockMessage.textContent = t("orientation.message");
+  }
+
+  refreshLanguageToggle();
+}
 
 function isPortraitViewport() {
   return window.innerHeight > window.innerWidth;
@@ -254,6 +722,11 @@ function preloadAssets() {
 
   getSuccessCueAudio()?.load();
   getSuccessCrowdAudio()?.load();
+  Object.values(instructionNarrationConfig).forEach((languageConfig) => {
+    Object.values(languageConfig).forEach((config) => {
+      createManagedAudio(config)?.load();
+    });
+  });
 }
 
 function formatRupees(value) {
@@ -261,11 +734,7 @@ function formatRupees(value) {
 }
 
 function formatDenomination(value) {
-  return value >= 10 ? `₹${value}` : `₹${value} coin`;
-}
-
-function getSelectionCardTitle(level) {
-  return level?.selectionName || level?.name || "Carnival Ride";
+  return `₹${value}`;
 }
 
 function getOverflowAmount(level, total) {
@@ -277,20 +746,22 @@ function getOverflowAmount(level, total) {
 }
 
 function getRuleBadgeText(ruleType) {
-  return "Any money allowed";
+  return t("selection.ruleBadge");
 }
 
 function getSelectionScreenStatus() {
   if (completedLevelIds.size === LEVELS.length) {
-    return "Every ride is complete. Refresh the page if you want to play the carnival again.";
+    return t("status.allRidesComplete");
   }
 
   if (completedLevelIds.size === 0) {
-    return "Choose a ride to start the next level.";
+    return t("status.chooseNextLevel");
   }
 
-  const rideWord = completedLevelIds.size === 1 ? "ride" : "rides";
-  return `${completedLevelIds.size} ${rideWord} complete. Choose another ride.`;
+  return t("status.rideCompleteCount", {
+    count: completedLevelIds.size,
+    rideWord: getRideWord(completedLevelIds.size),
+  });
 }
 
 function renderRideList() {
@@ -310,7 +781,12 @@ function renderRideList() {
     button.setAttribute("role", "listitem");
     button.setAttribute(
       "aria-label",
-      `${selectionTitle}, target ${formatRupees(level.targetAmount)}, ${ruleLabel}`,
+      t("aria.rideCard", {
+        selectionTitle,
+        targetLabel: t("selection.targetLabel"),
+        amount: formatRupees(level.targetAmount),
+        ruleLabel,
+      }),
     );
 
     if (isCompleted) {
@@ -327,7 +803,7 @@ function renderRideList() {
             decoding="async"
           />
         </span>
-        ${isCompleted ? '<span class="ride-card__badge" aria-hidden="true">Done</span>' : ""}
+        ${isCompleted ? '<span class="ride-card__badge" aria-hidden="true">&#10003;</span>' : ""}
       </span>
       <span class="sr-only">${selectionTitle} ${formatRupees(level.targetAmount)}</span>
     `;
@@ -340,19 +816,28 @@ function renderRideList() {
 
 function refreshHeader() {
   const level = getActiveLevel();
+  let nextNarrationKey = "";
 
   if (!level) {
-    gameTitle.textContent = "Welcome to the Carnival Coins!";
-    return;
+    gameTitle.textContent = t("banner.welcome");
+    nextNarrationKey = getWelcomeNarrationKey();
+  } else if (gameState.total > level.targetAmount) {
+    gameTitle.textContent = t("status.oopsTooMuchHeader");
+    nextNarrationKey = getTooMuchNarrationKey();
+  } else if (gameState.isComplete || isRoundResolved) {
+    gameTitle.textContent = t("status.perfectGoodJobHeader");
+  } else {
+    gameTitle.textContent = t("status.makeAmountUsingAnyMoney", {
+      amount: formatRupees(level.targetAmount),
+    });
+    nextNarrationKey = getInstructionNarrationKeyForLevel(level);
   }
 
-  gameTitle.textContent =
-    gameState.total > level.targetAmount
-      ? "Oops ! That is too much."
-      : gameState.isComplete || isRoundResolved
-        ? "Perfect. Good job!"
-        : `Make ${formatRupees(level.targetAmount)} using any money.`;
-  levelName.textContent = level.name;
+  if (level) {
+    levelName.textContent = getLevelDisplayName(level);
+  }
+
+  syncInstructionNarration(nextNarrationKey);
 }
 
 function refreshMessages(customStatusMessage = "") {
@@ -360,28 +845,34 @@ function refreshMessages(customStatusMessage = "") {
 
   if (!level) {
     statusMessage.textContent = customStatusMessage || getSelectionScreenStatus();
-    selectionHint.textContent = "Choose a ride to begin.";
+    selectionHint.textContent = t("status.chooseRideBegin");
     return;
   }
 
   if (isRetryMode) {
     statusMessage.textContent =
       customStatusMessage ||
-      `Not the right price for ${level.name}. Press Try Again to restart this ride.`;
+      t("status.wrongPriceRestartRide", {
+        rideName: getLevelDisplayName(level),
+      });
     selectionHint.textContent =
-      "Wrong total. Press Try Again to clear the money and start this ride again.";
+      t("hints.wrongTotalRestart");
     return;
   }
 
   if (gameState.isComplete) {
     if (isRoundResolved) {
-      statusMessage.textContent = `${level.name} complete! Returning to ride selection...`;
+      statusMessage.textContent = t("status.rideCompleteReturning", {
+        rideName: getLevelDisplayName(level),
+      });
       selectionHint.textContent =
-        "Ticket earned. This ride will be marked complete on the selection board.";
+        t("hints.ticketEarnedSelectionBoard");
     } else {
-      statusMessage.textContent = `Perfect total collected for ${level.name}. Press Check to finish the ride.`;
+      statusMessage.textContent = t("status.perfectTotalCollected", {
+        rideName: getLevelDisplayName(level),
+      });
       selectionHint.textContent =
-        "Use Check to confirm the total, or Undo to remove the last money item.";
+        t("hints.useCheckOrUndo");
     }
     return;
   }
@@ -389,24 +880,31 @@ function refreshMessages(customStatusMessage = "") {
   if (customStatusMessage) {
     statusMessage.textContent = customStatusMessage;
   } else if (gameState.total > level.targetAmount) {
-    statusMessage.textContent = `${formatRupees(getOverflowAmount(level, gameState.total))} too much. Press Check to see the result, or Undo to fix it.`;
+    statusMessage.textContent = t("status.overflowCheckOrUndo", {
+      amount: formatRupees(getOverflowAmount(level, gameState.total)),
+    });
   } else {
     const remaining = level.targetAmount - gameState.total;
     statusMessage.textContent =
       gameState.total === 0
-        ? `Drag or tap any money into the tray to reach ${formatRupees(level.targetAmount)}.`
-        : `${formatRupees(remaining)} left. Add any money you want.`;
+        ? t("status.dragToReachTarget", {
+          amount: formatRupees(level.targetAmount),
+        })
+        : t("status.amountLeftAddAny", {
+          amount: formatRupees(remaining),
+        });
   }
 
   selectionHint.textContent =
     gameState.total > level.targetAmount
-      ? "Overflow! The meter has gone past the target and turned red. Press Check or Undo the last money item."
-      : "Add any money until you reach the target, then press Check.";
+      ? t("hints.overflowMeterRed")
+      : t("hints.addMoneyThenCheck");
 }
 
 function refreshButtons() {
   const level = getActiveLevel();
-  const isInteractionLocked = !level || isRoundResolved || isRetryMode;
+  const isInteractionLocked =
+    !level || isRoundResolved || isRetryMode || isDropZoneAtCapacity();
 
   moneyButtons.forEach((button) => {
     button.classList.remove(
@@ -440,9 +938,16 @@ function refreshMeter() {
     "aria-valuetext",
     level
       ? isOverflowing
-        ? `${formatRupees(currentTotal)} collected, ${formatRupees(currentTotal - targetAmount)} over the target of ${formatRupees(targetAmount)}`
-        : `${formatRupees(currentTotal)} out of ${formatRupees(targetAmount)}`
-      : "No ride selected",
+        ? t("machine.meterValueOverflow", {
+          current: formatRupees(currentTotal),
+          overflow: formatRupees(currentTotal - targetAmount),
+          target: formatRupees(targetAmount),
+        })
+        : t("machine.meterValueProgress", {
+          current: formatRupees(currentTotal),
+          target: formatRupees(targetAmount),
+        })
+      : t("machine.meterNoRideSelected"),
   );
   if (machineGoal) {
     machineGoal.textContent = formatRupees(currentTotal);
@@ -465,9 +970,9 @@ function refreshPhase() {
   pageShell.classList.toggle(
     "is-near-complete",
     isGameView &&
-      !isComplete &&
-      !gameState.isComplete &&
-      completionRatio >= 0.8,
+    !isComplete &&
+    !gameState.isComplete &&
+    completionRatio >= 0.8,
   );
   pageShell.classList.toggle("is-complete", isComplete);
 
@@ -486,48 +991,23 @@ function refreshDropZone() {
   }
 
   machineDropZone.classList.toggle("has-money", placedMoney.length > 0);
+  machineDropZone.classList.toggle("is-full", isDropZoneAtCapacity());
+  dropZoneHint.hidden = true;
+  dropZoneHint.style.display = "none";
+  dropZoneHint.style.visibility = "hidden";
+  dropZoneHint.setAttribute("aria-hidden", "true");
+  dropZoneHint.textContent = "";
+
   machineDropZone.setAttribute(
     "aria-disabled",
-    String(!level || gameState.isComplete || isRetryMode),
+    String(!level || gameState.isComplete || isRetryMode || isDropZoneAtCapacity()),
   );
-
-  if (!level) {
-    dropZoneHint.textContent = "Drag or tap money to add it here";
-    return;
-  }
-
-  if (isRetryMode) {
-    dropZoneHint.textContent = "Wrong total. Press Try Again.";
-    return;
-  }
-
-  if (gameState.isComplete) {
-    dropZoneHint.textContent = isRoundResolved
-      ? "Target reached. Ticket unlocked."
-      : "Perfect total. Press Check.";
-    return;
-  }
-
-  if (gameState.total > level.targetAmount) {
-    dropZoneHint.textContent = `${formatRupees(getOverflowAmount(level, gameState.total))} too much in ${level.name}`;
-    return;
-  }
-
-  const remaining = level.targetAmount - gameState.total;
-  dropZoneHint.textContent =
-    placedMoney.length === 0
-      ? "Drag and Drop here"
-      : `${formatRupees(remaining)} left in ${level.name}`;
 }
 
-function renderPlacedMoney() {
-  if (!placedMoneyLayer) {
-    return;
-  }
-
+function createPlacedMoneyFragment(items) {
   const fragment = document.createDocumentFragment();
 
-  placedMoney.forEach((item) => {
+  items.forEach((item) => {
     const definition = getMoneyDefinition(item.kind);
 
     if (!definition || !definition.src) {
@@ -538,6 +1018,9 @@ function renderPlacedMoney() {
     const image = document.createElement("img");
 
     piece.className = "placed-money";
+    piece.classList.add(
+      definition.isNote ? "placed-money--note" : "placed-money--coin",
+    );
     image.className = definition.isNote
       ? "placed-money__sprite placed-money__sprite--note"
       : "placed-money__sprite placed-money__sprite--coin";
@@ -549,7 +1032,84 @@ function renderPlacedMoney() {
     fragment.appendChild(piece);
   });
 
-  placedMoneyLayer.replaceChildren(fragment);
+  return fragment;
+}
+
+function renderPlacedMoney() {
+  if (!placedMoneyLayer) {
+    return;
+  }
+
+  placedMoneyLayer.replaceChildren(createPlacedMoneyFragment(placedMoney));
+}
+
+function willPlacedMoneyOverflow(nextItems) {
+  if (!machineDropZone || !placedMoneyLayer || !document.body.contains(placedMoneyLayer)) {
+    return false;
+  }
+
+  const probe = placedMoneyLayer.cloneNode(false);
+  probe.removeAttribute("id");
+  probe.setAttribute("aria-hidden", "true");
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.style.overflow = "hidden";
+  probe.style.boxSizing = "border-box";
+  probe.style.zIndex = "-1";
+  probe.appendChild(createPlacedMoneyFragment(nextItems));
+  machineDropZone.appendChild(probe);
+
+  const probeRect = probe.getBoundingClientRect();
+  const probeChildren = [...probe.children];
+  const rowTops = [];
+  probeChildren.forEach((child) => {
+    const childRect = child.getBoundingClientRect();
+    const matchingRowIndex = rowTops.findIndex(
+      (rowTop) => Math.abs(rowTop - childRect.top) <= placedMoneyRowTolerancePx,
+    );
+
+    if (matchingRowIndex === -1) {
+      rowTops.push(childRect.top);
+    }
+  });
+  const isOverflowingByBounds = probeChildren.some((child) => {
+    const childRect = child.getBoundingClientRect();
+
+    return (
+      childRect.right > probeRect.right - placedMoneyBoundaryPaddingPx ||
+      childRect.bottom > probeRect.bottom - placedMoneyBoundaryPaddingPx
+    );
+  });
+  const isOverflowingByRows = rowTops.length > placedMoneyMaxRows;
+  const isOverflowingByScroll =
+    probe.scrollHeight > probe.clientHeight + placedMoneyMeasureTolerancePx ||
+    probe.scrollWidth > probe.clientWidth + placedMoneyMeasureTolerancePx;
+
+  probe.remove();
+  return isOverflowingByBounds || isOverflowingByRows || isOverflowingByScroll;
+}
+
+function canPlaceMoneySelection(moneySelection) {
+  if (!moneySelection) {
+    return false;
+  }
+
+  return !willPlacedMoneyOverflow([...placedMoney, moneySelection]);
+}
+
+function hasAnyPlaceableMoney() {
+  return moneyButtons.some((button) =>
+    canPlaceMoneySelection(createMoneySelectionFromButton(button)),
+  );
+}
+
+function isDropZoneAtCapacity() {
+  if (placedMoney.length === 0) {
+    return false;
+  }
+
+  return !hasAnyPlaceableMoney();
 }
 
 function refreshUndoButton() {
@@ -576,10 +1136,13 @@ function refreshCheckButton() {
   const canRetry = Boolean(level) && isRetryMode && !isRoundResolved;
 
   checkButton.classList.toggle("is-retry", canRetry);
-  checkButton.setAttribute("aria-label", canRetry ? "Try Again" : "Check");
+  checkButton.setAttribute(
+    "aria-label",
+    canRetry ? t("controls.tryAgain") : t("controls.check"),
+  );
 
   if (checkButtonLabel) {
-    checkButtonLabel.textContent = canRetry ? "Try Again" : "";
+    checkButtonLabel.textContent = canRetry ? t("controls.tryAgain") : "";
   }
 
   checkButton.disabled = canRetry
@@ -596,7 +1159,7 @@ function getAudioContext() {
   audioContext = audioContext || new AudioCtor();
 
   if (audioContext.state === "suspended") {
-    audioContext.resume().catch(() => {});
+    audioContext.resume().catch(() => { });
   }
 
   return audioContext;
@@ -628,52 +1191,6 @@ function playTone({ frequency, duration, type = "triangle", gainLevel = 0.07, sw
 
   oscillator.start(now);
   oscillator.stop(now + duration);
-}
-
-function playNoiseBurst({
-  startDelay = 0,
-  duration = 0.18,
-  gainLevel = 0.032,
-  centerFrequency = 1800,
-  q = 1.1,
-}) {
-  const context = getAudioContext();
-  if (!context) {
-    return;
-  }
-
-  const frameCount = Math.max(1, Math.floor(context.sampleRate * duration));
-  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
-  const channel = buffer.getChannelData(0);
-
-  for (let index = 0; index < frameCount; index += 1) {
-    channel[index] = Math.random() * 2 - 1;
-  }
-
-  const source = context.createBufferSource();
-  const bandPass = context.createBiquadFilter();
-  const highPass = context.createBiquadFilter();
-  const gainNode = context.createGain();
-  const now = context.currentTime + startDelay;
-
-  source.buffer = buffer;
-  bandPass.type = "bandpass";
-  bandPass.frequency.setValueAtTime(centerFrequency, now);
-  bandPass.Q.setValueAtTime(q, now);
-  highPass.type = "highpass";
-  highPass.frequency.setValueAtTime(700, now);
-
-  gainNode.gain.setValueAtTime(0.0001, now);
-  gainNode.gain.exponentialRampToValueAtTime(gainLevel, now + 0.02);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-  source.connect(bandPass);
-  bandPass.connect(highPass);
-  highPass.connect(gainNode);
-  gainNode.connect(context.destination);
-
-  source.start(now);
-  source.stop(now + duration);
 }
 
 function playTapSound(value) {
@@ -736,26 +1253,6 @@ function playWrongAnswerBuzz() {
   }, 170);
 }
 
-function playSuccessChime() {
-  playTone({
-    frequency: 523.25,
-    duration: 0.18,
-    type: "triangle",
-    gainLevel: 0.07,
-    sweepTo: 659.25,
-  });
-
-  window.setTimeout(() => {
-    playTone({
-      frequency: 659.25,
-      duration: 0.22,
-      type: "sine",
-      gainLevel: 0.05,
-      sweepTo: 783.99,
-    });
-  }, 90);
-}
-
 function createManagedAudio({ path, volume }) {
   if (typeof Audio === "undefined") {
     return null;
@@ -765,6 +1262,84 @@ function createManagedAudio({ path, volume }) {
   audio.preload = "auto";
   audio.volume = volume;
   return audio;
+}
+
+function getInstructionNarrationKeyForLevel(level) {
+  if (!level) {
+    return "";
+  }
+
+  return currentLanguage === "hi"
+    ? `hindiMake${level.targetAmount}`
+    : `make${level.targetAmount}`;
+}
+
+function getWelcomeNarrationKey() {
+  return currentLanguage === "hi" ? "hindiWelcome" : "welcome";
+}
+
+function getTooMuchNarrationKey() {
+  return currentLanguage === "hi" ? "hindiTooMuch" : "tooMuch";
+}
+
+function getInstructionNarrationConfig(narrationKey) {
+  const languageConfig = instructionNarrationConfig[currentLanguage] || instructionNarrationConfig.en;
+  return languageConfig[narrationKey] || null;
+}
+
+function resetInstructionNarrationAudio() {
+  if (!instructionNarrationAudio) {
+    return;
+  }
+
+  instructionNarrationAudio.onended = null;
+  instructionNarrationAudio.pause();
+
+  try {
+    instructionNarrationAudio.currentTime = 0;
+  } catch (_error) {
+    // Ignore media state reset failures while metadata is still loading.
+  }
+
+  instructionNarrationAudio = null;
+}
+
+function playInstructionNarration(narrationKey) {
+  const config = getInstructionNarrationConfig(narrationKey);
+
+  if (!config) {
+    return;
+  }
+
+  resetInstructionNarrationAudio();
+  instructionNarrationAudio = createManagedAudio(config);
+
+  if (!instructionNarrationAudio) {
+    return;
+  }
+
+  const playPromise = instructionNarrationAudio.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {});
+  }
+}
+
+function syncInstructionNarration(narrationKey) {
+  const narrationSignature = narrationKey ? `${currentLanguage}:${narrationKey}` : "";
+
+  if (lastInstructionNarrationSignature === narrationSignature) {
+    return;
+  }
+
+  lastInstructionNarrationSignature = narrationSignature;
+
+  if (!narrationKey) {
+    resetInstructionNarrationAudio();
+    return;
+  }
+
+  playInstructionNarration(narrationKey);
 }
 
 function getSuccessCueAudio() {
@@ -815,59 +1390,15 @@ function clearSuccessAudioPlayback() {
   resetManagedAudio(successCheerAudio);
 }
 
-function playFallbackSuccessCheer() {
-  playSuccessChime();
-
-  [
-    {
-      frequency: 622.25,
-      duration: 0.28,
-      type: "triangle",
-      gainLevel: 0.028,
-      sweepTo: 830.61,
-    },
-    {
-      frequency: 698.46,
-      duration: 0.24,
-      type: "sine",
-      gainLevel: 0.024,
-      sweepTo: 932.33,
-    },
-    {
-      frequency: 783.99,
-      duration: 0.26,
-      type: "triangle",
-      gainLevel: 0.022,
-      sweepTo: 1046.5,
-    },
-  ].forEach((tone, index) => {
-    window.setTimeout(() => {
-      playTone(tone);
-    }, 110 + index * 70);
-  });
-
-  [
-    { startDelay: 0.02, duration: 0.16, gainLevel: 0.022, centerFrequency: 2100 },
-    { startDelay: 0.14, duration: 0.2, gainLevel: 0.026, centerFrequency: 1700 },
-    { startDelay: 0.26, duration: 0.18, gainLevel: 0.02, centerFrequency: 2400 },
-    { startDelay: 0.38, duration: 0.22, gainLevel: 0.028, centerFrequency: 1500 },
-  ].forEach((burst) => {
-    playNoiseBurst(burst);
-  });
-}
-
 function playSuccessCue() {
+  resetInstructionNarrationAudio();
+  lastInstructionNarrationSignature = "";
   const audio = getSuccessCueAudio();
   const cueToCheerDelayMs = getSuccessCueToCheerDelayMs(audio);
-  const fallbackChimeDurationMs = 320;
 
   if (!audio) {
-    playSuccessChime();
-    successCheerTimer = window.setTimeout(() => {
-      playSuccessCheer();
-      successCheerTimer = 0;
-    }, fallbackChimeDurationMs);
-    return fallbackChimeDurationMs;
+    playSuccessCheer();
+    return 0;
   }
 
   resetManagedAudio(audio);
@@ -897,11 +1428,7 @@ function playSuccessCue() {
       audio.onended = null;
       window.clearTimeout(successCheerTimer);
       successCheerTimer = 0;
-      playSuccessChime();
-      successCheerTimer = window.setTimeout(() => {
-        playSuccessCheer();
-        successCheerTimer = 0;
-      }, fallbackChimeDurationMs);
+      playSuccessCheer();
     });
   }
 
@@ -916,7 +1443,6 @@ function playSuccessCheer() {
   );
 
   if (!audio) {
-    playFallbackSuccessCheer();
     return durationMs;
   }
 
@@ -925,9 +1451,7 @@ function playSuccessCheer() {
   const playPromise = audio.play();
 
   if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch(() => {
-      playFallbackSuccessCheer();
-    });
+    playPromise.catch(() => { });
   }
 
   return durationMs;
@@ -1196,9 +1720,13 @@ function showSuccessPopup(level) {
   isSuccessPopupOpen = true;
   successPopup.dataset.theme = level.id;
   successPopupImage.src = level.successScreenSrc || "";
-  successPopupImage.alt = `${level.name} success screen`;
-  successPopupTitle.textContent = "Great Job!";
-  successPopupSubtitle.textContent = `${level.name} ticket unlocked!`;
+  successPopupImage.alt = t("successPopup.imageAlt", {
+    rideName: getLevelDisplayName(level),
+  });
+  successPopupTitle.textContent = t("successPopup.title");
+  successPopupSubtitle.textContent = t("successPopup.subtitle", {
+    rideName: getLevelDisplayName(level),
+  });
   successPopup.setAttribute("aria-hidden", "false");
 
   pageShell.classList.remove("is-success-popup-visible");
@@ -1292,7 +1820,11 @@ function scheduleReturnToSelection(delayMs = 4200) {
     }
 
     completedLevelIds.add(completedLevel.id);
-    showSelectionScreen(`${completedLevel.name} is complete! Choose another ride.`);
+    showSelectionScreen(
+      t("status.rideCompletedChooseAnother", {
+        rideName: getLevelDisplayName(completedLevel),
+      }),
+    );
   }, delayMs);
 }
 
@@ -1335,7 +1867,10 @@ function startLevel(levelId) {
   isRetryMode = false;
   gameState = createInitialRoundState(level);
   updateGame(
-    `Collect exactly ${formatRupees(level.targetAmount)} for ${level.name}. Drag or tap any money you like.`,
+    t("status.collectExactForRide", {
+      amount: formatRupees(level.targetAmount),
+      rideName: getLevelDisplayName(level),
+    }),
   );
 }
 
@@ -1363,7 +1898,10 @@ function restartActiveLevel() {
   isRetryMode = false;
   gameState = createInitialRoundState(level);
   updateGame(
-    `${level.name} restarted. Drag or tap any money to reach ${formatRupees(level.targetAmount)}.`,
+    t("status.rideRestarted", {
+      rideName: getLevelDisplayName(level),
+      amount: formatRupees(level.targetAmount),
+    }),
   );
 }
 
@@ -1381,6 +1919,14 @@ function attemptMoneyPlacement(moneySelection, sourceButton) {
   const button = sourceButton || moneyButtonByKind.get(moneySelection?.kind) || null;
 
   if (!level || !moneySelection || isRetryMode || isRoundResolved) {
+    return;
+  }
+
+  if (!canPlaceMoneySelection(moneySelection)) {
+    playDeniedSound();
+    if (button) {
+      restartAnimation(button, "is-denied");
+    }
     return;
   }
 
@@ -1405,10 +1951,17 @@ function attemptMoneyPlacement(moneySelection, sourceButton) {
 
   if (gameState.total > level.targetAmount) {
     updateGame(
-      `Oops! That's ${formatRupees(getOverflowAmount(level, gameState.total))} too much for ${level.name}. Press Check or Undo.`,
+      t("status.oopsTooMuchForRide", {
+        amount: formatRupees(getOverflowAmount(level, gameState.total)),
+        rideName: getLevelDisplayName(level),
+      }),
     );
   } else if (gameState.isComplete) {
-    updateGame(`Perfect total for ${level.name}. Press Check to finish the ride.`);
+    updateGame(
+      t("status.perfectTotalForRide", {
+        rideName: getLevelDisplayName(level),
+      }),
+    );
   }
 }
 
@@ -1436,8 +1989,11 @@ function undoLastDrop() {
 
   updateGame(
     placedMoney.length === 0
-      ? "Last drop removed. Drag or tap a denomination to start again."
-      : `Last drop removed. ${formatRupees(level.targetAmount - gameState.total)} left in ${level.name}.`,
+      ? t("status.lastDropRemovedStartAgain")
+      : t("status.lastDropRemovedAmountLeft", {
+        amount: formatRupees(level.targetAmount - gameState.total),
+        rideName: getLevelDisplayName(level),
+      }),
   );
 }
 
@@ -1476,7 +2032,11 @@ function getDragSelection(event) {
 function handleMoneyDragStart(event) {
   const button = event.currentTarget;
 
-  if (!(button instanceof HTMLButtonElement) || button.disabled) {
+  if (
+    !(button instanceof HTMLButtonElement) ||
+    button.disabled ||
+    isDropZoneAtCapacity()
+  ) {
     event.preventDefault();
     return;
   }
@@ -1504,12 +2064,32 @@ function handleMoneyDragStart(event) {
 
   const sprite = button.querySelector(".money-sprite");
 
-  if (sprite instanceof HTMLImageElement) {
-    event.dataTransfer.setDragImage(
-      sprite,
-      sprite.clientWidth / 2 || 40,
-      sprite.clientHeight / 2 || 40,
-    );
+  // Hide the browser drag preview by using a transparent 1x1 canvas as the drag image.
+  // This avoids the visible ghost copy while still allowing drag/drop to work.
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    if (canvas.getContext) {
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, 1, 1);
+      event.dataTransfer.setDragImage(canvas, 0, 0);
+    } else if (sprite instanceof HTMLImageElement) {
+      // Fallback to using the sprite if canvas isn't supported
+      event.dataTransfer.setDragImage(
+        sprite,
+        sprite.clientWidth / 2 || 40,
+        sprite.clientHeight / 2 || 40,
+      );
+    }
+  } catch (_err) {
+    if (sprite instanceof HTMLImageElement) {
+      event.dataTransfer.setDragImage(
+        sprite,
+        sprite.clientWidth / 2 || 40,
+        sprite.clientHeight / 2 || 40,
+      );
+    }
   }
 }
 
@@ -1518,7 +2098,7 @@ function handleMoneyDragEnd() {
 }
 
 function handleDropZoneDragOver(event) {
-  if (!getActiveLevel() || isRetryMode || isRoundResolved) {
+  if (!getActiveLevel() || isRetryMode || isRoundResolved || isDropZoneAtCapacity()) {
     return;
   }
 
@@ -1552,7 +2132,7 @@ function handleDropZoneDrop(event) {
 
   clearActiveDragState();
 
-  if (!selection) {
+  if (!selection || !canPlaceMoneySelection(selection)) {
     return;
   }
 
@@ -1580,7 +2160,11 @@ function handleCheck() {
     isRoundResolved = true;
     isRetryMode = false;
     const successSequenceDurationMs = runSuccessSequence();
-    updateGame(`${level.name} complete! Returning to ride selection...`);
+    updateGame(
+      t("status.rideCompleteReturning", {
+        rideName: getLevelDisplayName(level),
+      }),
+    );
     scheduleReturnToSelection(successSequenceDurationMs + 180);
     return;
   }
@@ -1591,17 +2175,25 @@ function handleCheck() {
 
   if (gameState.total > level.targetAmount) {
     updateGame(
-      `${formatRupees(getOverflowAmount(level, gameState.total))} too much for ${level.name}. Press Try Again.`,
+      t("status.tooMuchPressTryAgain", {
+        amount: formatRupees(getOverflowAmount(level, gameState.total)),
+        rideName: getLevelDisplayName(level),
+      }),
     );
     return;
   }
 
   updateGame(
-    `${formatRupees(level.targetAmount)} was needed, but this total is ${formatRupees(gameState.total)}. Press Try Again.`,
+    t("status.neededButTotal", {
+      needed: formatRupees(level.targetAmount),
+      total: formatRupees(gameState.total),
+    }),
   );
 }
 
-function init() {
+async function init() {
+  await loadTranslations();
+  applyStaticTranslations();
   preloadAssets();
   syncLandscapeMode();
   updateGame();
@@ -1619,7 +2211,11 @@ function init() {
   machineDropZone?.addEventListener("drop", handleDropZoneDrop);
 
   backButton.addEventListener("click", () => {
-    showSelectionScreen("Choose another ride when you are ready.");
+    showSelectionScreen(t("status.chooseRideReady"));
+  });
+
+  languageToggle?.addEventListener("click", () => {
+    setLanguage(currentLanguage === "en" ? "hi" : "en");
   });
 
   undoButton?.addEventListener("click", undoLastDrop);
@@ -1649,4 +2245,4 @@ function init() {
   });
 }
 
-init();
+void init();

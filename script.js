@@ -366,9 +366,9 @@ async function loadTranslations() {
             addMoneyThenCheck: "Add any money until you reach the target, then press Check."
           },
           successPopup: {
-            eyebrow: "Ticket Unlocked",
+            eyebrow: "Unlocked",
             title: "Great Job!",
-            subtitle: "{rideName} ticket unlocked!",
+            subtitle: "{rideName} ready!",
             imageAlt: "{rideName} success screen"
           },
           orientation: {
@@ -437,9 +437,9 @@ async function loadTranslations() {
             addMoneyThenCheck: "लक्ष्य तक पहुंचने तक पैसा जोड़ें, फिर जांचें दबाएं।"
           },
           successPopup: {
-            eyebrow: "टिकट अनलॉक हुआ",
+            eyebrow: "अनलॉक",
             title: "बहुत बढ़िया!",
-            subtitle: "{rideName} का टिकट अनलॉक हो गया!",
+            subtitle: "{rideName} तैयार!",
             imageAlt: "{rideName} सफलता स्क्रीन"
           },
           orientation: {

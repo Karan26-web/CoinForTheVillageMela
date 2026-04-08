@@ -1121,10 +1121,11 @@ html[lang="hi"] .top-banner h1 {
   --game-undo-size: max(44px, calc(var(--layout-stage-width) * 54 / var(--design-width)));
   --game-undo-edge: max(16px, calc(var(--layout-stage-width) * 26 / var(--design-width)));
   --game-drop-safe-inline-start: 10px;
-  --game-drop-safe-inline-end: 56px;
+  --game-drop-safe-inline-end: max(72px,
+      calc(var(--game-undo-size) + var(--game-undo-edge) + 8px));
   --game-drop-safe-block-start: 6px;
   --game-drop-safe-block-end: 10px;
-  --game-drop-columns: 8;
+  --game-drop-columns: 7;
   --game-drop-slot-width: clamp(78px,
       calc(var(--layout-stage-width) * 88 / var(--design-width)),
       92px);
@@ -1557,7 +1558,7 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
   bottom: calc(var(--game-drop-inset-block-end) + var(--game-drop-safe-block-end));
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(var(--game-drop-columns), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--game-drop-columns), minmax(0, var(--game-drop-slot-width)));
   grid-auto-rows: var(--game-drop-slot-height);
   grid-auto-flow: row dense;
   min-height: 0;
@@ -3046,7 +3047,7 @@ html[lang="hi"] .page-shell.is-game-view .top-banner h1 {
         calc(var(--layout-stage-width) * 26 / var(--design-width)));
     --game-drop-inset-block-end: max(16px,
         calc(var(--layout-stage-height) * 20 / var(--design-height)));
-    --game-drop-columns: 8;
+    --game-drop-columns: 7;
     --game-drop-slot-width: clamp(72px,
         calc(var(--layout-stage-width) * 78 / var(--design-width)),
         84px);

@@ -934,8 +934,11 @@ function refreshButtons() {
     const selection = createMoneySelectionFromButton(button);
     const isLockedToOtherDenomination =
       Boolean(lockedMoneyKind) && selection?.kind !== lockedMoneyKind;
+    const wouldOverflow =
+      Boolean(level) && !isInteractionLocked && Boolean(selection) &&
+      willPlacedMoneyOverflow([...placedMoney, selection]);
     const isButtonDisabled =
-      !level || isInteractionLocked || isLockedToOtherDenomination;
+      !level || isInteractionLocked || isLockedToOtherDenomination || wouldOverflow;
 
     button.classList.remove(
       "is-selected",
@@ -1135,6 +1138,24 @@ function hasAnyPlaceableMoney() {
 function isDropZoneAtCapacity() {
   if (placedMoney.length === 0) {
     return false;
+  }
+
+  // When 3 rows are already in use, check if the last row has only 1 slot
+  // remaining. Notes (span=2) leave a 1-slot gap per row that coins could
+  // technically fill, but visually the grid looks full — so disable everything.
+  if (getPlacedMoneyRowCount(placedMoney) >= placedMoneyMaxRows) {
+    const columnCount = getPlacedMoneyColumnCount();
+    let usedSlotsInRow = 0;
+    for (const item of placedMoney) {
+      const span = Math.min(getPlacedMoneySpan(item), columnCount);
+      if (usedSlotsInRow + span > columnCount) {
+        usedSlotsInRow = 0;
+      }
+      usedSlotsInRow += span;
+    }
+    if (usedSlotsInRow >= columnCount - 1) {
+      return true;
+    }
   }
 
   return !hasAnyPlaceableMoney();
